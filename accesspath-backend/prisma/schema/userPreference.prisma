@@ -1,0 +1,15 @@
+model UserPreference {
+  id          String   @id @default(uuid())
+
+  userId      String   @unique
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  travelMode  TravelMode @default(WALKING)
+
+  accessibilityNeeds Json?
+  preferredLanguage  String? @default("en")
+  notificationEnabled Boolean @default(true)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}

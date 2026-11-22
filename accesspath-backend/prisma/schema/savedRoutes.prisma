@@ -1,0 +1,30 @@
+
+model SavedRoute {
+  id              String     @id @default(uuid())
+
+  name            String?
+
+  originName      String
+  originLatitude  Float
+  originLongitude Float
+
+  destinationName      String
+  destinationLatitude  Float
+  destinationLongitude Float
+
+  travelMode      TravelMode @default(WALKING)
+
+  distanceMeters  Int?
+  durationSeconds Int?
+
+  routeData       Json?
+  accessibilityRequirements Json?
+
+  userId          String
+  user            User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  @@index([userId, createdAt])
+}

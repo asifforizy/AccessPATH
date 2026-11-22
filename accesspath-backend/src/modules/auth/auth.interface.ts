@@ -6,3 +6,9 @@ export interface IRegisterUsersPayload {
 		contactNumber?: string;
 	};
 }
+
+
+export interface IVerifyEmailPayload {
+	email: string;
+	otp: string;
+}

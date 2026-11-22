@@ -22,6 +22,13 @@ const UserRegistrationZodSchema = z.object({
 		.optional(),
 });
 
+
+const UserEmailVerifyZodSchema = z.object({
+	email: z.email("Not email!!"),
+	otp: z.string().length(6),
+});
+
 export const UserValidation = {
 	UserRegistrationZodSchema,
+    UserEmailVerifyZodSchema,
 };

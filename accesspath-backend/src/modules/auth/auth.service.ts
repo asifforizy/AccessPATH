@@ -85,6 +85,8 @@ const registerUsers = async (payload: IRegisterUsersPayload) => {
 	});
 };
 
+
+
 export const AuthService = {
 	registerUsers,
 };

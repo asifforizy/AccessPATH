@@ -1,0 +1,16 @@
+model LocationPhoto {
+  id           String   @id @default(uuid())
+
+  url          String
+  publicId     String?
+
+  locationId   String
+  location     Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+
+  uploadedById String?
+  isPrimary    Boolean  @default(false)
+
+  createdAt    DateTime @default(now())
+
+  @@index([locationId])
+}

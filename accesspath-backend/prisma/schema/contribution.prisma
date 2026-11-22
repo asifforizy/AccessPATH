@@ -1,0 +1,30 @@
+model Contribution {
+  id           String             @id @default(uuid())
+
+  type         ContributionType
+  status       ContributionStatus @default(PENDING)
+
+  title        String?
+  description  String?
+
+  proposedData Json
+
+  locationId   String?
+  location     Location?          @relation(fields: [locationId], references: [id], onDelete: SetNull)
+
+  submittedById String
+  submittedBy   User               @relation("ContributionAuthor", fields: [submittedById], references: [id], onDelete: Restrict)
+
+  reviewedById String?
+  reviewedBy   User?              @relation("ContributionReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+
+  reviewNote   String?
+  reviewedAt   DateTime?
+
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+
+  @@index([status, createdAt])
+  @@index([submittedById])
+  @@index([locationId])
+}

@@ -1,0 +1,23 @@
+model AccessibilityReport {
+  id          String       @id @default(uuid())
+
+  type        ReportType
+  description String
+
+  status      ReportStatus @default(PENDING)
+
+  locationId  String
+  location    Location     @relation(fields: [locationId], references: [id], onDelete: Cascade)
+
+  reporterId  String
+  reporter    User         @relation("ReportAuthor", fields: [reporterId], references: [id], onDelete: Restrict)
+
+  attachments ReportPhoto[]
+
+  reviewedAt  DateTime?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@index([locationId, status])
+  @@index([reporterId])
+}

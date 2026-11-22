@@ -1,0 +1,12 @@
+model ReportPhoto {
+  id        String             @id @default(uuid())
+  url       String
+  publicId  String?
+
+  reportId  String
+  report    AccessibilityReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime           @default(now())
+
+  @@index([reportId])
+}

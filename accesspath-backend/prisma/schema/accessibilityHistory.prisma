@@ -1,0 +1,13 @@
+model AccessibilityHistory {
+  id          String   @id @default(uuid())
+
+  locationId  String
+  location    Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+
+  snapshot    Json
+
+  changedById String?
+  createdAt   DateTime @default(now())
+
+  @@index([locationId, createdAt])
+}

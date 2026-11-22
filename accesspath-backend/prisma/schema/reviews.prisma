@@ -1,0 +1,20 @@
+model Review {
+  id        String   @id @default(uuid())
+
+  rating    Int
+  comment   String?
+
+  userId    String
+  user      User     @relation("ReviewAuthor", fields: [userId], references: [id], onDelete: Cascade)
+
+  locationId String
+  location   Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+
+  helpfulVotes ReviewHelpful[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, locationId])
+  @@index([locationId, rating])
+}

@@ -1,0 +1,29 @@
+
+model AccessibilityProfile {
+  id                    String   @id @default(uuid())
+
+  locationId            String   @unique
+  location              Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+
+  wheelchairAccessible  Boolean  @default(false)
+  rampAvailable         Boolean  @default(false)
+  elevatorAvailable     Boolean  @default(false)
+  accessibleRestroom    Boolean  @default(false)
+  accessibleParking     Boolean  @default(false)
+  stepFreeEntrance      Boolean  @default(false)
+
+  tactilePaving         Boolean  @default(false)
+  brailleSignage        Boolean  @default(false)
+  hearingLoop           Boolean  @default(false)
+
+  additionalInformation String?
+
+  accessibilityScore    Int      @default(0)
+  isVerified            Boolean  @default(false)
+  verifiedAt            DateTime?
+
+  updatedAt             DateTime @updatedAt
+
+  @@index([accessibilityScore])
+  @@index([isVerified])
+}
