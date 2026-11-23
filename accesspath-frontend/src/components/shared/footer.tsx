@@ -6,6 +6,7 @@ import {
     MapPin
 } from 'lucide-react'
 import { FaFacebookF, FaGithub, FaLinkedinIn } from "react-icons/fa";
+import Logo from '@/assets/logo';
 
 const exploreLinks = [
     { label: 'Explore Locations', href: '/explore' },
@@ -38,11 +39,10 @@ export function Footer() {
                     <div className="space-y-4">
                         <Link
                             href="/"
-                            className="inline-flex items-center gap-2 text-2xl font-bold"
+                            aria-label="AccessPath home"
+                            className="inline-flex items-center gap-2 text-2xl font-bold tracking-tight"
                         >
-                            <span className="flex size-9 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-                                <Accessibility className="size-6" />
-                            </span>
+                            <Logo size={30} title="AccessPath" className="shrink-0" />
                             <span>
                                 Access<span className="text-primary">Path</span>
                             </span>
@@ -161,7 +161,7 @@ export function Footer() {
                 <div className="mt-10 flex flex-col items-center justify-between gap-4 border-t pt-6 text-center sm:flex-row sm:text-left">
 
                     <p className="text-sm text-muted-foreground">
-                        © {new Date().getFullYear()} AccessPath. All rights reserved.
+                        © 2026 AccessPath. All rights reserved.
                     </p>
 
                     <p className="inline-flex items-center gap-2 text-sm text-muted-foreground">
