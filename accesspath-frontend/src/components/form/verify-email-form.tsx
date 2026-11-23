@@ -15,7 +15,6 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { refreshProfile } from "@/services/refresh-profile";
 import { verifyEmail } from "@/services/verify-email";
 
 
@@ -52,9 +51,8 @@ export function VerifyEmailForm() {
         return;
       }
 
-      await refreshProfile();
-      toast.success("Email verified successfully");
-      router.replace("/");
+      toast.success("Email verified successfully. Please log in.");
+      router.replace("/login");
       router.refresh();
     } catch (error) {
       toast.error(

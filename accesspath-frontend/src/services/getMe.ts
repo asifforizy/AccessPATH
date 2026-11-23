@@ -7,25 +7,25 @@ export const getMe = async () => {
   const accessToken = cookieStore.get("accessToken")?.value || null;
 
   if (!accessToken) {
-    return {
-      success: false,
-      message: "User not logged in!",
-    };
+    return null;
   }
 
-  const res = await fetch(`${process.env.BACKEND_API_URL}/api/auth/me`, {
-    headers: {
-      Cookie: `accessToken=${accessToken}`,
-    },
+  try {
+    const res = await fetch(`${process.env.BACKEND_API_URL}/api/v1/auth/me`, {
+      headers: {
+        Cookie: `accessToken=${accessToken}`,
+      },
+      cache: "no-store",
+    });
 
-    cache: "force-cache",
-    next: {
-      revalidate: 60 * 60 * 24,
-      tags: ["my-profile"],
-    },
-  });
+    if (!res.ok) {
+      return null;
+    }
 
-  const result = await res.json();
+    const result = await res.json();
 
-  return result;
+    return result?.data ?? null;
+  } catch {
+    return null;
+  }
 };
