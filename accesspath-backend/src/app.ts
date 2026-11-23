@@ -9,6 +9,7 @@ import config from "./config";
 import { globalErrorHandler } from "./middleware/globalErrorHandler";
 import { notFound } from "./middleware/notFound";
 import { AuthRoutes } from "./modules/auth/auth.route";
+import { UsersRoutes } from "./modules/users/users.route";
 
 const app: Application = express();
 
@@ -23,6 +24,7 @@ app.use(
 );
 
 app.use("/api/v1/auth", AuthRoutes);
+app.use("/api/v1/users", UsersRoutes);
 
 app.get("/", async (req: Request, res: Response) => {
 	res.send("accesspath server is running");

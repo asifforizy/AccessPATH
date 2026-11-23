@@ -44,26 +44,32 @@ export const auth = (...requiredRoles: UserRole[]) => {
 			throw new AppError(httpStatus.UNAUTHORIZED, verifiedToken.error);
 		}
 
-		const { email, name, userId, role } = verifiedToken.data as JwtPayload & {
-			email: string;
-			name: string;
-			userId: string;
-			role: UserRole;
+		const { userId } = verifiedToken.data as JwtPayload & {
+			userId?: string;
 		};
 
+		if (!userId) {
+			throw new AppError(
+				httpStatus.UNAUTHORIZED,
+				"Invalid token payload. Please log in again.",
+			);
+		}
+
 		const user = await prisma.user.findUnique({
-			where: {
-				id: userId,
-				email,
-				name,
-				role,
-			},
+			where: { id: userId },
 		});
 
 		if (!user) {
 			throw new AppError(
 				httpStatus.UNAUTHORIZED,
 				"User not found. Please log in again.",
+			);
+		}
+
+		if (user.deletedAt) {
+			throw new AppError(
+				httpStatus.FORBIDDEN,
+				"Your account has been deleted. Please contact support.",
 			);
 		}
 
