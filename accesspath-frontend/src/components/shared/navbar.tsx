@@ -317,6 +317,16 @@ export function Navbar({ user }: NavbarProps) {
                                     <DropdownMenuSeparator />
 
                                     <DropdownMenuItem
+                                        render={<Link href="/profile" />}
+                                        className="flex cursor-pointer items-center gap-2"
+                                    >
+                                        <User className="size-4" />
+                                        Profile
+                                    </DropdownMenuItem>
+
+
+
+                                    <DropdownMenuItem
                                         render={<Link href={dashboardHref} />}
                                         className="flex cursor-pointer items-center gap-2"
                                     >
