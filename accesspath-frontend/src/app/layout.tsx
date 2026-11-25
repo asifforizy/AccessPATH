@@ -1,14 +1,13 @@
 
 import type { Metadata } from "next";
-import type { ReactNode } from "react";
+import { Suspense, type ReactNode } from "react";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "sonner";
 import { GoogleProvider } from "@/provider/google-provider";
 import { ThemeProvider } from "@/components/shared/theme-provider";
-import { Navbar } from "@/components/shared/navbar";
-import { getMe } from "@/services/getMe";
 import { Footer } from "@/components/shared/footer";
+import { AuthUser } from "@/provider/auth-user";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -22,29 +21,26 @@ export const metadata: Metadata = {
     "Discover accessible places and barrier-free routes with AccessPath.",
 };
 
-const RootLayout = async ({
+const RootLayout = ({
   children,
 }: Readonly<{
   children: ReactNode;
 }>) => {
-  const user = await getMe();
-
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${inter.variable} font-sans antialiased`}>
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-        >
+      <body className={`${inter.variable} antialiased`}>
+        <ThemeProvider>
           <GoogleProvider>
-            <Navbar user={user} />
-            {children}
-            <Footer/>
-          </GoogleProvider>
+            <Suspense fallback={<div>Loading...</div>}>
+              <AuthUser />
+            </Suspense>
 
-          <Toaster richColors position="top-right" />
+            {children}
+
+            <Footer />
+
+            <Toaster position="top-right" />
+          </GoogleProvider>
         </ThemeProvider>
       </body>
     </html>
