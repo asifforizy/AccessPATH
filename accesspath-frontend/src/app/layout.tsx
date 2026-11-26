@@ -26,8 +26,8 @@ const RootLayout = ({
   children: ReactNode;
 }>) => {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body className={`${inter.variable} antialiased`}>
+    <html lang="en" suppressHydrationWarning className={inter.variable}>
+      <body className="antialiased">
         <ThemeProvider>
           <GoogleProvider>
             <Suspense fallback={<div>Loading...</div>}>

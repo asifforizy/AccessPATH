@@ -17,7 +17,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
 const heroImage =
-  "https://i.ibb.co.com/pBWPdg08/map-marked-with-pins-phone.jpg";
+  "https://i.ibb.co.com/DDtPsDYV/3d-view-map.jpg?auto=format&fit=crop&w=900&q=80";
 
 const stats = [
   { value: "2,400+", label: "Accessible places" },
