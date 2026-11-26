@@ -1,26 +1,28 @@
 "use client";
 
 import {
+  Accessibility,
   AlertTriangle,
-  CheckCircle2,
+  ArrowUpDown,
+  Bike,
+  Car,
+  Footprints,
+  Info,
   Loader2,
+  Maximize2,
   Route as RouteIcon,
+  X,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
-import { Badge } from "@/components/ui/badge";
+import { RouteEndpointPicker } from "@/components/route/route-endpoint-picker";
+import { type IRouteMapActions, RouteMap } from "@/components/route/route-map";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select } from "@/components/ui/select";
+import { useUserLocation } from "@/hooks/use-user-location";
+import { cn } from "@/lib/utils";
 import {
   getRouteAccessibility,
   getRouteBarriers,
@@ -29,286 +31,320 @@ import {
   submitRouteFeedback,
   validateRoute,
 } from "@/services/routes";
-import type {
-  IPlanRouteResult,
-  IRouteOption,
-  IRouteWarning,
-} from "@/utils/types";
+import type { IRoutePoint, PickKind, TravelMode } from "@/types/route.types";
+import type { IPlanRouteResult, IRouteOption } from "@/utils/types";
 
-const travelModes = ["WALKING", "WHEELCHAIR", "CYCLING", "DRIVING"] as const;
+import { RouteOptionCard } from "./route-option-card";
+
+const travelModes: Array<{
+  value: TravelMode;
+  label: string;
+  icon: typeof Accessibility;
+}> = [
+  { value: "WHEELCHAIR", label: "Wheelchair", icon: Accessibility },
+  { value: "WALKING", label: "Walk", icon: Footprints },
+  { value: "CYCLING", label: "Bike", icon: Bike },
+  { value: "DRIVING", label: "Drive", icon: Car },
+];
 
 const requirementFields = [
   { key: "avoidStairs", label: "Avoid stairs" },
   { key: "requireElevator", label: "Require elevator" },
-  { key: "requireRestroom", label: "Accessible restroom nearby" },
-  { key: "requireParking", label: "Accessible parking nearby" },
+  { key: "requireRestroom", label: "Restroom nearby" },
+  { key: "requireParking", label: "Parking nearby" },
   { key: "avoidUnsafeCrossings", label: "Avoid unsafe crossings" },
 ] as const;
 
-/** Small dependency-free route preview from real waypoints. */
-function RoutePreview({
-  waypoints,
-  recommended,
-}: {
-  waypoints: Array<{ latitude: number; longitude: number }>;
-  recommended: boolean;
-}) {
-  const geometry = useMemo(() => {
-    if (waypoints.length < 2) return null;
+type LatLng = { latitude: number; longitude: number };
 
-    const lats = waypoints.map((point) => point.latitude);
-    const lngs = waypoints.map((point) => point.longitude);
-    const minLat = Math.min(...lats);
-    const maxLat = Math.max(...lats);
-    const minLng = Math.min(...lngs);
-    const maxLng = Math.max(...lngs);
-    const spanLat = maxLat - minLat || 0.001;
-    const spanLng = maxLng - minLng || 0.001;
+const coordinateLabel = (point: IRoutePoint) =>
+  `${point.latitude.toFixed(5)}, ${point.longitude.toFixed(5)}`;
 
-    return waypoints.map((point) => ({
-      x: 6 + ((point.longitude - minLng) / spanLng) * 88,
-      y: 94 - ((point.latitude - minLat) / spanLat) * 88,
-    }));
-  }, [waypoints]);
-
-  if (!geometry) return null;
-
-  const first = geometry[0];
-  const last = geometry[geometry.length - 1];
-
-  return (
-    <svg
-      viewBox="0 0 100 100"
-      role="img"
-      aria-label={`Route preview with ${waypoints.length} waypoints`}
-      className="h-28 w-full rounded-md border border-border bg-muted/40"
-    >
-      <polyline
-        points={geometry.map((point) => `${point.x},${point.y}`).join(" ")}
-        fill="none"
-        stroke="currentColor"
-        strokeWidth={recommended ? 3 : 2}
-        strokeDasharray={recommended ? undefined : "4 3"}
-        className="text-primary"
-        strokeLinejoin="round"
-        strokeLinecap="round"
-      />
-      {first && (
-        <circle cx={first.x} cy={first.y} r={3.5} className="fill-primary" />
-      )}
-      {last && (
-        <circle
-          cx={last.x}
-          cy={last.y}
-          r={3.5}
-          className="fill-background stroke-foreground"
-          strokeWidth={2}
-        />
-      )}
-    </svg>
-  );
-}
-
-function WarningList({ warnings }: { warnings: IRouteWarning[] }) {
-  if (warnings.length === 0) {
-    return (
-      <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-        <CheckCircle2 aria-hidden="true" className="size-3.5" />
-        No barriers reported along this corridor.
-      </p>
-    );
-  }
-
-  return (
-    <ul className="space-y-1">
-      {warnings.slice(0, 6).map((warning) => (
-        <li
-          key={`${warning.code}-${warning.distanceMeters ?? 0}-${warning.locationId ?? ""}`}
-          className="flex items-start gap-1.5 text-xs"
-        >
-          <AlertTriangle
-            aria-hidden="true"
-            className={
-              warning.severity === "high"
-                ? "mt-0.5 size-3.5 text-destructive"
-                : "mt-0.5 size-3.5 text-muted-foreground"
-            }
-          />
-          <span>
-            {warning.message}
-            {typeof warning.distanceMeters === "number" && (
-              <span className="text-muted-foreground">
-                {" "}
-                · {warning.distanceMeters} m from route
-              </span>
-            )}
-            <span className="sr-only"> ({warning.severity} severity)</span>
-          </span>
-        </li>
-      ))}
-    </ul>
-  );
-}
-
-function ScoreBar({
-  label,
-  value,
-  tone,
-}: {
-  label: string;
-  value: number;
-  tone: "positive" | "negative";
-}) {
-  if (value === 0) return null;
-  const width = Math.min(
-    100,
-    Math.max(4, Math.abs(value) * (tone === "negative" ? 2.5 : 4)),
-  );
-
-  return (
-    <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
-      <span className="w-32 shrink-0">{label}</span>
-      <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
-        <span
-          className={
-            tone === "positive"
-              ? "block h-full rounded-full bg-primary"
-              : "block h-full rounded-full bg-destructive/70"
-          }
-          style={{ width: `${width}%` }}
-        />
-      </span>
-      <span className="w-10 shrink-0 text-right font-medium text-foreground">
-        {tone === "positive" ? "+" : "−"}
-        {value}
-      </span>
-    </div>
-  );
-}
+const keyOf = (
+  origin: IRoutePoint | null,
+  destination: IRoutePoint | null,
+  mode: TravelMode,
+  requirements: Record<string, boolean>,
+) =>
+  origin && destination
+    ? `${coordinateLabel(origin)}|${coordinateLabel(destination)}|${mode}|${JSON.stringify(requirements)}`
+    : null;
 
 export function RoutePlanner() {
-  const [originName, setOriginName] = useState("Ramna Park");
-  const [originLat, setOriginLat] = useState("23.7338");
-  const [originLng, setOriginLng] = useState("90.4016");
-  const [destName, setDestName] = useState("National Museum");
-  const [destLat, setDestLat] = useState("23.7379");
-  const [destLng, setDestLng] = useState("90.3945");
-  const [travelMode, setTravelMode] = useState<string>("WHEELCHAIR");
-  const [save, setSave] = useState(false);
+  const [origin, setOrigin] = useState<IRoutePoint | null>(null);
+  const [destination, setDestination] = useState<IRoutePoint | null>(null);
+  const [travelMode, setTravelMode] = useState<TravelMode>("WHEELCHAIR");
   const [requirements, setRequirements] = useState<Record<string, boolean>>({
     avoidStairs: true,
   });
+  const [save, setSave] = useState(true);
+  const [picking, setPicking] = useState<PickKind | null>(null);
+  const [awaitingMyLocation, setAwaitingMyLocation] = useState(false);
+  const [roadPaths, setRoadPaths] = useState<LatLng[][]>([]);
+  const [roadStatus, setRoadStatus] = useState<
+    "idle" | "loading" | "ready" | "unavailable"
+  >("idle");
 
   const [options, setOptions] = useState<IRouteOption[]>([]);
-  const [plan, setPlan] = useState<IPlanRouteResult | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [loading, setLoading] = useState<string | null>(null);
+  const [plan, setPlan] = useState<IPlanRouteResult | null>(null);
+  const [plannedKey, setPlannedKey] = useState<string | null>(null);
+  const [planning, setPlanning] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const [routeId, setRouteId] = useState("");
   const [radius, setRadius] = useState("1000");
   const [toolResult, setToolResult] = useState<string | null>(null);
+  const [toolLoading, setToolLoading] = useState<string | null>(null);
   const [rating, setRating] = useState("5");
   const [comment, setComment] = useState("");
 
-  const payload = () => ({
-    origin: {
-      name: originName || undefined,
-      latitude: Number(originLat),
-      longitude: Number(originLng),
-    },
-    destination: {
-      name: destName || undefined,
-      latitude: Number(destLat),
-      longitude: Number(destLng),
-    },
-    travelMode: travelMode as "WALKING" | "WHEELCHAIR" | "CYCLING" | "DRIVING",
-    accessibilityRequirements: requirements,
-    save,
-  });
+  const mapActions = useRef<IRouteMapActions | null>(null);
+  const userLocation = useUserLocation();
 
-  const selected =
-    options.find((option) => option.id === selectedId) ?? options[0] ?? null;
+  const selected = useMemo(
+    () =>
+      options.find((option) => option.id === selectedId) ?? options[0] ?? null,
+    [options, selectedId],
+  );
+  const waypoints = useMemo(() => selected?.waypoints ?? [], [selected]);
+
+  const selectedIndex = Math.max(
+    0,
+    options.findIndex((option) => option.id === selected?.id),
+  );
+  const roadPath = roadPaths[selectedIndex] ?? roadPaths[0] ?? null;
+
+  const currentKey = keyOf(origin, destination, travelMode, requirements);
+  const stale =
+    plannedKey !== null && currentKey !== null && plannedKey !== currentKey;
+
+  /**
+   * Street-level path for the map preview. The backend only returns scoring
+   * waypoints, so the drawn line comes from the routing proxy; the corridor is
+   * kept as the fallback when the provider is unreachable.
+   */
+  useEffect(() => {
+    if (!origin || !destination) {
+      setRoadPaths([]);
+      setRoadStatus("idle");
+      return;
+    }
+
+    const controller = new AbortController();
+    const timer = window.setTimeout(async () => {
+      setRoadStatus("loading");
+
+      const params = new URLSearchParams({
+        originLat: String(origin.latitude),
+        originLng: String(origin.longitude),
+        destinationLat: String(destination.latitude),
+        destinationLng: String(destination.longitude),
+        mode: travelMode,
+      });
+
+      try {
+        const response = await fetch(`/api/route-path?${params.toString()}`, {
+          signal: controller.signal,
+        });
+        const body = (await response.json().catch(() => null)) as {
+          success?: boolean;
+          paths?: Array<{ coordinates: LatLng[] }>;
+        } | null;
+
+        const paths = response.ok && body?.success ? (body.paths ?? []) : [];
+        setRoadPaths(paths.map((entry) => entry.coordinates));
+        setRoadStatus(paths.length > 0 ? "ready" : "unavailable");
+      } catch {
+        if (!controller.signal.aborted) {
+          setRoadPaths([]);
+          setRoadStatus("unavailable");
+        }
+      }
+    }, 350);
+
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
+  }, [origin, destination, travelMode]);
+
+  // "My location" resolves asynchronously; fill the field when it arrives.
+  useEffect(() => {
+    if (!awaitingMyLocation || !userLocation.position) return;
+    const point = {
+      name: "My location",
+      latitude: userLocation.position.latitude,
+      longitude: userLocation.position.longitude,
+    };
+    setOrigin(point);
+    mapActions.current?.focus(point);
+    setAwaitingMyLocation(false);
+  }, [awaitingMyLocation, userLocation.position]);
+
+  const useMyLocation = () => {
+    if (userLocation.position) {
+      const point = {
+        name: "My location",
+        latitude: userLocation.position.latitude,
+        longitude: userLocation.position.longitude,
+      };
+      setOrigin(point);
+      mapActions.current?.focus(point);
+      return;
+    }
+    setAwaitingMyLocation(true);
+    userLocation.request();
+  };
+
+  const pickPoint = useCallback(
+    (kind: PickKind, point: { latitude: number; longitude: number }) => {
+      const existing = kind === "origin" ? origin : destination;
+      // A map click is a fresh choice; a marker drag keeps the place name.
+      const name =
+        picking !== null
+          ? kind === "origin"
+            ? "Pinned start"
+            : "Pinned destination"
+          : (existing?.name ?? "Pinned place");
+
+      const next: IRoutePoint = { name, ...point };
+      if (kind === "origin") setOrigin(next);
+      else setDestination(next);
+      setPicking(null);
+    },
+    [origin, destination, picking],
+  );
+
+  const togglePick = (kind: PickKind) =>
+    setPicking((current) => (current === kind ? null : kind));
+
+  const swap = () => {
+    setOrigin(destination);
+    setDestination(origin);
+  };
 
   const findRoutes = async () => {
+    if (!origin || !destination) {
+      setError("Choose a starting point and a destination first.");
+      return;
+    }
+
+    setPlanning(true);
+    setError(null);
+
     try {
-      setLoading("alternatives");
-      const response = await planRoute(payload());
+      const response = await planRoute({
+        origin: {
+          name: origin.name,
+          latitude: origin.latitude,
+          longitude: origin.longitude,
+        },
+        destination: {
+          name: destination.name,
+          latitude: destination.latitude,
+          longitude: destination.longitude,
+        },
+        travelMode,
+        accessibilityRequirements: requirements,
+        save,
+        name: `${origin.name} → ${destination.name}`,
+      });
 
       if (!response.success || !response.data) {
-        toast.error(response.message);
+        setError(response.message || "Routes could not be planned");
         return;
       }
 
-      setPlan(response.data);
-      const asOptions: IRouteOption[] = response.data.alternatives.map(
-        (summary) => ({
-          ...summary,
-          travelMode: response.data?.travelMode ?? travelMode,
-        }),
-      );
+      const data = response.data;
+      const ranked: IRouteOption[] = data.alternatives.map((summary) => ({
+        ...summary,
+        travelMode: data.travelMode,
+      }));
 
-      setOptions(asOptions);
-      setSelectedId(asOptions[0]?.id ?? null);
+      setPlan(data);
+      setOptions(ranked);
+      setSelectedId(ranked[0]?.id ?? null);
+      setPlannedKey(keyOf(origin, destination, travelMode, requirements));
 
-      if (response.data.routeId) {
-        setRouteId(response.data.routeId);
-        toast.success("Route planned and saved");
+      if (ranked.length === 0) {
+        setError("No route options were found between these places.");
       } else {
-        toast.success("Accessible routes ranked");
+        toast.success(
+          `Compared ${ranked.length} accessible route${ranked.length === 1 ? "" : "s"}`,
+        );
       }
     } finally {
-      setLoading(null);
+      setPlanning(false);
     }
   };
 
   const runTool = async (
-    kind: "barriers" | "accessibility" | "validate" | "score",
+    kind: "validate" | "score" | "barriers" | "accessibility",
   ) => {
-    try {
-      setLoading(kind);
-      setToolResult(null);
+    if (!origin || !destination) return;
 
+    setToolLoading(kind);
+    setToolResult(null);
+
+    const endpoints = {
+      origin: {
+        name: origin.name,
+        latitude: origin.latitude,
+        longitude: origin.longitude,
+      },
+      destination: {
+        name: destination.name,
+        latitude: destination.latitude,
+        longitude: destination.longitude,
+      },
+      travelMode,
+    };
+
+    try {
       if (kind === "validate") {
-        const response = await validateRoute(payload());
+        const response = await validateRoute(endpoints);
         setToolResult(
-          response.success
-            ? `Valid route · ${(response.data?.distanceMeters ?? 0) / 1000} km · ${Math.round((response.data?.estimatedDurationSeconds ?? 0) / 60)} min`
+          response.success && response.data
+            ? `Valid route · ${(response.data.distanceMeters / 1000).toFixed(2)} km · ${Math.round(response.data.estimatedDurationSeconds / 60)} min`
             : response.message,
         );
       }
 
       if (kind === "score") {
         const response = await scoreRoute({
-          origin: payload().origin,
-          destination: payload().destination,
+          origin: endpoints.origin,
+          destination: endpoints.destination,
           radiusMeters: Number(radius) || 1000,
         });
         setToolResult(
           response.success && response.data
-            ? `Area accessibility score ${response.data.accessibilityScore} (${response.data.rating ?? "n/a"}) · ${response.data.averageScore}% average nearby`
+            ? `Area accessibility ${response.data.accessibilityScore}/100 (${response.data.rating ?? "unrated"}) · ${response.data.averageScore}% average nearby`
             : response.message,
         );
       }
 
       if (kind === "barriers") {
-        if (!routeId) {
-          setToolResult("Plan and save a route first.");
+        if (!plan?.routeId) {
+          setToolResult("Save the route first to inspect its corridors.");
           return;
         }
-        const response = await getRouteBarriers(routeId, Number(radius) || 500);
+        const response = await getRouteBarriers(
+          plan.routeId,
+          Number(radius) || 500,
+        );
         setToolResult(
           response.success
-            ? `${response.data?.total ?? 0} active barrier report(s) along this route corridor`
+            ? `${response.data?.total ?? 0} active barrier report(s) along this corridor`
             : response.message,
         );
       }
 
       if (kind === "accessibility") {
-        if (!routeId) {
-          setToolResult("Plan and save a route first.");
+        if (!plan?.routeId) {
+          setToolResult("Save the route first to inspect its corridors.");
           return;
         }
-        const response = await getRouteAccessibility(routeId);
+        const response = await getRouteAccessibility(plan.routeId);
         setToolResult(
           response.success
             ? `Nearby accessibility average ${response.data?.averageScore ?? 0}/100 across ${response.data?.locations.length ?? 0} location(s)`
@@ -316,17 +352,17 @@ export function RoutePlanner() {
         );
       }
     } finally {
-      setLoading(null);
+      setToolLoading(null);
     }
   };
 
   const sendFeedback = async () => {
-    if (!routeId) {
-      toast.error("Plan and save a route first.");
+    if (!plan?.routeId) {
+      toast.error("Save the route first to send feedback.");
       return;
     }
 
-    const response = await submitRouteFeedback(routeId, {
+    const response = await submitRouteFeedback(plan.routeId, {
       rating: Number(rating),
       comment: comment || undefined,
     });
@@ -339,341 +375,434 @@ export function RoutePlanner() {
     }
   };
 
+  const canPlan = Boolean(origin && destination);
+
   return (
-    <div className="space-y-4">
-      <Card>
-        <CardHeader>
-          <CardTitle>Plan an accessible route</CardTitle>
-          <CardDescription>
-            Routes are scored from verified accessibility data and live barrier
-            reports along each corridor — not distance alone.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="space-y-2 rounded-lg border border-border p-3">
-              <p className="text-sm font-medium">Origin</p>
-              <div className="grid grid-cols-2 gap-2">
-                <Input
-                  value={originName}
-                  onChange={(event) => setOriginName(event.target.value)}
-                  placeholder="Name"
-                  aria-label="Origin name"
-                  className="col-span-2 h-8"
-                />
-                <Input
-                  value={originLat}
-                  onChange={(event) => setOriginLat(event.target.value)}
-                  type="number"
-                  step="0.0001"
-                  aria-label="Origin latitude"
-                  className="h-8"
-                />
-                <Input
-                  value={originLng}
-                  onChange={(event) => setOriginLng(event.target.value)}
-                  type="number"
-                  step="0.0001"
-                  aria-label="Origin longitude"
-                  className="h-8"
-                />
-              </div>
+    <div className="flex min-w-0 flex-col gap-3 lg:grid lg:h-full lg:min-h-0 lg:grid-cols-[23.5rem_minmax(0,1fr)] lg:grid-rows-[auto_minmax(0,1fr)]">
+      {/* ── Planner form ───────────────────────────────────────────────── */}
+      <Card className="min-w-0 shrink-0 lg:col-start-1 lg:row-start-1">
+        <CardContent className="space-y-3">
+          <div className="space-y-2">
+            <RouteEndpointPicker
+              label="From"
+              accent="origin"
+              placeholder="Search a starting place"
+              point={origin}
+              onSelect={(point) => {
+                setOrigin(point);
+                setPicking(null);
+                mapActions.current?.focus(point);
+              }}
+              onClear={() => setOrigin(null)}
+              onUseMyLocation={useMyLocation}
+              locating={
+                awaitingMyLocation || userLocation.status === "requesting"
+              }
+              onTogglePick={() => togglePick("origin")}
+              picking={picking === "origin"}
+            />
+
+            <div className="flex justify-center">
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-xs"
+                onClick={swap}
+                disabled={!origin && !destination}
+                aria-label="Swap start and destination"
+                title="Swap start and destination"
+              >
+                <ArrowUpDown aria-hidden="true" />
+              </Button>
             </div>
 
-            <div className="space-y-2 rounded-lg border border-border p-3">
-              <p className="text-sm font-medium">Destination</p>
-              <div className="grid grid-cols-2 gap-2">
-                <Input
-                  value={destName}
-                  onChange={(event) => setDestName(event.target.value)}
-                  placeholder="Name"
-                  aria-label="Destination name"
-                  className="col-span-2 h-8"
-                />
-                <Input
-                  value={destLat}
-                  onChange={(event) => setDestLat(event.target.value)}
-                  type="number"
-                  step="0.0001"
-                  aria-label="Destination latitude"
-                  className="h-8"
-                />
-                <Input
-                  value={destLng}
-                  onChange={(event) => setDestLng(event.target.value)}
-                  type="number"
-                  step="0.0001"
-                  aria-label="Destination longitude"
-                  className="h-8"
-                />
-              </div>
-            </div>
+            <RouteEndpointPicker
+              label="To"
+              accent="destination"
+              placeholder="Search a destination"
+              point={destination}
+              onSelect={(point) => {
+                setDestination(point);
+                setPicking(null);
+                mapActions.current?.focus(point);
+              }}
+              onClear={() => setDestination(null)}
+              onTogglePick={() => togglePick("destination")}
+              picking={picking === "destination"}
+            />
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="space-y-1.5">
-              <Label htmlFor="travelMode">Travel mode</Label>
-              <Select
-                id="travelMode"
-                value={travelMode}
-                onChange={(event) => setTravelMode(event.target.value)}
-              >
-                {travelModes.map((mode) => (
-                  <option key={mode} value={mode}>
-                    {mode.charAt(0)}
-                    {mode.slice(1).toLowerCase()}
-                  </option>
-                ))}
-              </Select>
-            </div>
+          {userLocation.error && (
+            <p className="flex items-start gap-1.5 text-xs text-muted-foreground">
+              <AlertTriangle
+                aria-hidden="true"
+                className="mt-0.5 size-3.5 shrink-0"
+              />
+              {userLocation.error}
+            </p>
+          )}
 
-            <label className="flex items-end gap-2 pb-1 text-sm">
+          <fieldset className="space-y-1.5">
+            <legend className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+              Travel mode
+            </legend>
+            <div className="grid grid-cols-2 gap-1.5">
+              {travelModes.map((mode) => {
+                const Icon = mode.icon;
+                const active = travelMode === mode.value;
+                return (
+                  <Button
+                    key={mode.value}
+                    type="button"
+                    size="sm"
+                    variant={active ? "secondary" : "outline"}
+                    aria-pressed={active}
+                    onClick={() => setTravelMode(mode.value)}
+                    className={cn(
+                      "justify-start gap-1.5",
+                      active && "ring-1 ring-primary/40",
+                    )}
+                  >
+                    <Icon aria-hidden="true" />
+                    {mode.label}
+                  </Button>
+                );
+              })}
+            </div>
+          </fieldset>
+
+          <fieldset className="space-y-1.5">
+            <legend className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+              Needs
+            </legend>
+            <div className="flex flex-wrap gap-1.5">
+              {requirementFields.map((field) => {
+                const active = Boolean(requirements[field.key]);
+                return (
+                  <Button
+                    key={field.key}
+                    type="button"
+                    variant={active ? "secondary" : "ghost"}
+                    size="xs"
+                    aria-pressed={active}
+                    onClick={() =>
+                      setRequirements((previous) => ({
+                        ...previous,
+                        [field.key]: !previous[field.key],
+                      }))
+                    }
+                    className={cn(
+                      "rounded-full border",
+                      active ? "border-primary/40" : "border-border",
+                    )}
+                  >
+                    {field.label}
+                  </Button>
+                );
+              })}
+            </div>
+          </fieldset>
+
+          {error && (
+            <p
+              role="alert"
+              className="rounded-md border border-destructive/30 bg-destructive/10 px-2.5 py-1.5 text-xs text-destructive"
+            >
+              {error}
+            </p>
+          )}
+
+          <div className="flex items-center justify-between gap-2 border-t border-border pt-3">
+            <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
               <input
                 type="checkbox"
                 checked={save}
                 onChange={(event) => setSave(event.target.checked)}
-                className="size-4 rounded border accent-primary"
+                className="size-3.5 rounded border accent-primary"
               />
-              Save this route
+              Save route
             </label>
-          </div>
 
-          <fieldset>
-            <legend className="mb-2 text-sm font-medium">
-              Accessibility requirements
-            </legend>
-            <div className="grid gap-1.5 sm:grid-cols-2">
-              {requirementFields.map((field) => (
-                <label
-                  key={field.key}
-                  className="flex cursor-pointer items-center gap-2 text-sm"
-                >
-                  <input
-                    type="checkbox"
-                    checked={Boolean(requirements[field.key])}
-                    onChange={(event) =>
-                      setRequirements((previous) => ({
-                        ...previous,
-                        [field.key]: event.target.checked,
-                      }))
-                    }
-                    className="size-4 accent-primary"
-                  />
-                  {field.label}
-                </label>
-              ))}
-            </div>
-          </fieldset>
-
-          <div className="flex flex-wrap gap-2">
             <Button
               type="button"
+              size="sm"
               onClick={findRoutes}
-              disabled={loading !== null}
+              disabled={planning || !canPlan}
+              title={
+                canPlan ? undefined : "Choose a start and a destination first"
+              }
             >
-              {loading === "alternatives" ? (
-                <Loader2 className="size-4 animate-spin" />
+              {planning ? (
+                <Loader2 aria-hidden="true" className="animate-spin" />
               ) : (
-                <RouteIcon className="size-4" />
+                <RouteIcon aria-hidden="true" />
               )}
               Find accessible routes
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              disabled={loading !== null}
-              onClick={() => runTool("validate")}
-            >
-              {loading === "validate" && (
-                <Loader2 className="size-4 animate-spin" />
-              )}
-              Validate
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              disabled={loading !== null}
-              onClick={() => runTool("score")}
-            >
-              {loading === "score" && (
-                <Loader2 className="size-4 animate-spin" />
-              )}
-              Area score
             </Button>
           </div>
         </CardContent>
       </Card>
 
-      {options.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Ranked route options</CardTitle>
-            <CardDescription>
-              Ranked by accessibility score first, then travel time.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
+      {/* ── Map ────────────────────────────────────────────────────────── */}
+      <div className="relative h-72 min-w-0 overflow-hidden rounded-xl border border-border bg-muted sm:h-80 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:h-auto">
+        <RouteMap
+          ref={mapActions}
+          origin={origin}
+          destination={destination}
+          path={roadPath}
+          waypoints={waypoints}
+          picking={picking}
+          userPosition={userLocation.position}
+          onPick={pickPoint}
+        />
+
+        <div className="pointer-events-none absolute top-3 left-3 z-10 flex flex-col gap-1.5 text-xs">
+          <span className="pointer-events-auto inline-flex items-center gap-1.5 rounded-lg border border-border bg-card/95 px-2 py-1 shadow-sm backdrop-blur">
+            <span
+              aria-hidden="true"
+              className="size-2.5 rounded-full bg-primary"
+            />
+            Start
+            <span
+              aria-hidden="true"
+              className="ml-1 size-2.5 rounded-full bg-rose-600"
+            />
+            Destination
+          </span>
+          {!origin && !destination && (
+            <span className="pointer-events-auto max-w-56 rounded-lg border border-border bg-card/95 px-2 py-1 text-muted-foreground shadow-sm backdrop-blur">
+              Search a place above, or pin both points on the map.
+            </span>
+          )}
+        </div>
+
+        {picking && (
+          <div className="absolute inset-x-3 top-3 z-20 flex items-center justify-between gap-2 rounded-lg border border-primary/40 bg-card px-3 py-2 text-xs shadow-md">
+            <span>
+              Click the map to set the{" "}
+              <strong>{picking === "origin" ? "start" : "destination"}</strong>.
+            </span>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-xs"
+              onClick={() => setPicking(null)}
+              aria-label="Cancel picking on the map"
+            >
+              <X aria-hidden="true" />
+            </Button>
+          </div>
+        )}
+
+        {roadStatus === "unavailable" && origin && destination && (
+          <span className="absolute bottom-3 left-3 z-10 rounded-lg border border-border bg-card/95 px-2 py-1 text-[11px] text-muted-foreground shadow-sm backdrop-blur">
+            Street path unavailable — showing the scored corridor
+          </span>
+        )}
+
+        {(origin || destination) && (
+          <Button
+            type="button"
+            variant="outline"
+            size="icon-sm"
+            onClick={() => mapActions.current?.fitAll()}
+            aria-label="Fit start and destination on the map"
+            title="Fit on map"
+            className="absolute top-3 right-3 z-10 bg-card shadow-sm"
+          >
+            <Maximize2 aria-hidden="true" />
+          </Button>
+        )}
+      </div>
+
+      {/* ── Results ────────────────────────────────────────────────────── */}
+      <div className="relative min-w-0 space-y-2 lg:col-start-1 lg:row-start-2 lg:min-h-0 lg:overflow-y-auto lg:pr-0.5">
+        {stale && (
+          <p className="rounded-md border border-amber-500/30 bg-amber-500/10 px-2.5 py-1.5 text-xs text-amber-700 dark:text-amber-400">
+            Start, destination, mode or needs changed — run the comparison
+            again.
+          </p>
+        )}
+
+        {planning && (
+          <Card>
+            <CardContent className="flex items-center gap-2 py-1 text-sm text-muted-foreground">
+              <Loader2
+                aria-hidden="true"
+                className="size-4 shrink-0 animate-spin"
+              />
+              Scoring accessibility and barriers along the corridor — long
+              routes can take a few seconds.
+            </CardContent>
+          </Card>
+        )}
+
+        {!planning && options.length === 0 ? (
+          <Card>
+            <CardContent className="space-y-2 py-1">
+              <p className="flex items-center gap-1.5 text-sm font-medium">
+                <Info aria-hidden="true" className="size-4 text-primary" />
+                No route planned yet
+              </p>
+              <ol className="list-decimal space-y-1 pl-4 text-xs text-muted-foreground">
+                <li>Type a place name, or tap “My location” for the start.</li>
+                <li>
+                  Set where you are going the same way, or pin it on the map.
+                </li>
+                <li>
+                  Pick a travel mode and your needs, then run the comparison.
+                </li>
+              </ol>
+              <p className="text-xs text-muted-foreground">
+                Every option is scored from verified accessibility data and live
+                barrier reports along the corridor — not distance alone.
+              </p>
+            </CardContent>
+          </Card>
+        ) : (
+          <>
+            <div className="flex items-baseline justify-between gap-2 px-0.5">
+              <h2 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+                {options.length} route option
+                {options.length === 1 ? "" : "s"}
+              </h2>
+              <span className="text-[11px] text-muted-foreground">
+                {selected
+                  ? `Showing ${selected.distanceText} · ${selected.durationText}`
+                  : null}
+              </span>
+            </div>
+
             {options.map((option, index) => (
-              <button
-                type="button"
+              <RouteOptionCard
                 key={option.id}
-                onClick={() => setSelectedId(option.id)}
-                aria-pressed={option.id === selected?.id}
-                className={`w-full rounded-lg border p-3 text-left transition-colors ${
-                  option.id === selected?.id
-                    ? "border-primary bg-muted"
-                    : "border-border hover:bg-muted"
-                }`}
-              >
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <span className="flex items-center gap-2">
-                    <Badge variant={option.recommended ? "success" : "outline"}>
-                      {option.recommended
-                        ? "Recommended"
-                        : `Option ${index + 1}`}
-                    </Badge>
-                    <span className="text-sm font-medium">
-                      {option.distanceText} · {option.durationText}
-                    </span>
-                  </span>
-                  <span className="flex items-center gap-1.5 text-sm font-semibold">
-                    <Badge variant="secondary">
-                      Score {option.accessibilityScore}/100
-                    </Badge>
-                    <Badge variant="outline">Grade {option.grade}</Badge>
-                  </span>
-                </div>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  {option.support.sampledLocations} accessible place(s) along
-                  the corridor · {option.support.verifiedRatio}% verified
-                  {option.support.stepFreeRatio > 0
-                    ? ` · ${option.support.stepFreeRatio}% step-free`
-                    : ""}
-                </p>
-              </button>
+                option={option}
+                index={index}
+                selected={option.id === selected?.id}
+                onSelect={() => setSelectedId(option.id)}
+              />
             ))}
+          </>
+        )}
 
-            {selected && (
-              <div className="grid gap-4 border-t border-border pt-3 md:grid-cols-2">
-                <div className="space-y-3">
-                  <RoutePreview
-                    waypoints={selected.waypoints}
-                    recommended={selected.recommended}
-                  />
-                  <div className="space-y-1.5">
-                    <ScoreBar
-                      label="Verified data bonus"
-                      value={selected.breakdown.supportBonus}
-                      tone="positive"
-                    />
-                    {selected.breakdown.modeBonus > 0 && (
-                      <ScoreBar
-                        label="Step-free bonus"
-                        value={selected.breakdown.modeBonus}
-                        tone="positive"
-                      />
-                    )}
-                    <ScoreBar
-                      label="Barrier penalty"
-                      value={selected.breakdown.barrierPenalty}
-                      tone="negative"
-                    />
-                    <ScoreBar
-                      label="Detour penalty"
-                      value={selected.breakdown.distancePenalty}
-                      tone="negative"
-                    />
-                    <ScoreBar
-                      label="Unverified data"
-                      value={selected.breakdown.dataQualityPenalty}
-                      tone="negative"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <p className="text-sm font-medium">Accessibility warnings</p>
-                  <WarningList warnings={selected.warnings} />
-                </div>
+        {plan?.routeId && options.length > 0 && (
+          <details className="rounded-xl border border-border bg-card">
+            <summary className="cursor-pointer px-3 py-2 text-xs font-medium text-muted-foreground">
+              Route tools · saved route
+            </summary>
+            <div className="space-y-2 border-t border-border p-3">
+              <div className="flex flex-wrap gap-1.5">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="xs"
+                  disabled={toolLoading !== null}
+                  onClick={() => runTool("barriers")}
+                >
+                  {toolLoading === "barriers" && (
+                    <Loader2 aria-hidden="true" className="animate-spin" />
+                  )}
+                  Barriers
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="xs"
+                  disabled={toolLoading !== null}
+                  onClick={() => runTool("accessibility")}
+                >
+                  {toolLoading === "accessibility" && (
+                    <Loader2 aria-hidden="true" className="animate-spin" />
+                  )}
+                  Accessibility
+                </Button>
+                <Input
+                  value={radius}
+                  onChange={(event) => setRadius(event.target.value)}
+                  type="number"
+                  min={100}
+                  aria-label="Corridor radius in meters"
+                  className="h-6 w-24"
+                />
               </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
 
-      {plan?.routeId && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Route tools</CardTitle>
-            <CardDescription>
-              Saved route ID: <code className="text-xs">{plan.routeId}</code>
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="grid gap-2 sm:grid-cols-3">
-              <Input
-                value={radius}
-                onChange={(event) => setRadius(event.target.value)}
-                type="number"
-                aria-label="Radius in meters"
-                placeholder="Radius (m)"
-                className="h-8"
-              />
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => runTool("barriers")}
-                disabled={loading !== null}
-              >
-                Barriers along route
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => runTool("accessibility")}
-                disabled={loading !== null}
-              >
-                Accessibility profile
-              </Button>
+              {toolResult && (
+                <output className="block rounded-md border border-border p-2 text-xs">
+                  {toolResult}
+                </output>
+              )}
+
+              <div className="grid gap-1.5 sm:grid-cols-[4rem_1fr_auto]">
+                <Input
+                  value={rating}
+                  onChange={(event) => setRating(event.target.value)}
+                  type="number"
+                  min={1}
+                  max={5}
+                  aria-label="Route rating"
+                  className="h-7"
+                />
+                <Input
+                  value={comment}
+                  onChange={(event) => setComment(event.target.value)}
+                  placeholder="How was this route?"
+                  aria-label="Route feedback comment"
+                  className="h-7"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="xs"
+                  onClick={sendFeedback}
+                >
+                  Send
+                </Button>
+              </div>
             </div>
+          </details>
+        )}
 
-            {toolResult && (
-              <output className="block rounded-md border border-border p-2 text-xs">
-                {toolResult}
-              </output>
-            )}
-
-            <div className="grid gap-2 sm:grid-cols-[6rem_1fr_auto]">
-              <Input
-                value={rating}
-                onChange={(event) => setRating(event.target.value)}
-                type="number"
-                min={1}
-                max={5}
-                aria-label="Route rating"
-                className="h-8"
-              />
-              <Input
-                value={comment}
-                onChange={(event) => setComment(event.target.value)}
-                placeholder="Optional comment about this route"
-                aria-label="Route feedback comment"
-                className="h-8"
-              />
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                onClick={sendFeedback}
-              >
-                Send feedback
-              </Button>
+        {canPlan && (
+          <details className="rounded-xl border border-border bg-card">
+            <summary className="cursor-pointer px-3 py-2 text-xs font-medium text-muted-foreground">
+              Diagnostics
+            </summary>
+            <div className="space-y-2 border-t border-border p-3">
+              <div className="flex flex-wrap gap-1.5">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="xs"
+                  disabled={toolLoading !== null}
+                  onClick={() => runTool("validate")}
+                >
+                  {toolLoading === "validate" && (
+                    <Loader2 aria-hidden="true" className="animate-spin" />
+                  )}
+                  Validate route
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="xs"
+                  disabled={toolLoading !== null}
+                  onClick={() => runTool("score")}
+                >
+                  {toolLoading === "score" && (
+                    <Loader2 aria-hidden="true" className="animate-spin" />
+                  )}
+                  Area accessibility
+                </Button>
+              </div>
+              {toolResult && (
+                <output className="block rounded-md border border-border p-2 text-xs">
+                  {toolResult}
+                </output>
+              )}
             </div>
-          </CardContent>
-        </Card>
-      )}
+          </details>
+        )}
+      </div>
     </div>
   );
 }
