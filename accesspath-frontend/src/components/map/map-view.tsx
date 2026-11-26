@@ -398,10 +398,15 @@ export function MapView({
   }, []);
 
   return (
-    <div className="relative size-full">
+    <div className="relative h-full w-full overflow-hidden">
+      {/*
+       * MapLibre writes inline pixel sizes on its canvas, so the measured
+       * container must not feed those sizes back into the page layout. The map
+       * cell owns a definite height; this section just fills it.
+       */}
       <section
         ref={containerRef}
-        className="size-full bg-muted"
+        className="h-full w-full bg-muted"
         aria-label="Interactive map of accessible places"
       />
 

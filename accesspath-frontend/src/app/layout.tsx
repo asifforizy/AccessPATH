@@ -6,6 +6,7 @@ import { Toaster } from "sonner";
 import { ThemeProvider } from "@/components/shared/theme-provider";
 import { AuthUser } from "@/provider/auth-user";
 import { GoogleProvider } from "@/provider/google-provider";
+import { Footer } from "@/components/shared/footer";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -34,7 +35,7 @@ const RootLayout = ({
             </Suspense>
 
             {children}
-
+            <Footer/>
             <Toaster position="top-right" />
           </GoogleProvider>
         </ThemeProvider>

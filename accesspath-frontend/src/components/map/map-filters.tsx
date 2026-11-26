@@ -15,6 +15,8 @@ import { filterableFeatureKeys, hasActiveFilters } from "@/types/place.types";
 import { CategoryIcon, categoryGroupFromText, featureLabel } from "./map-meta";
 
 interface MapFiltersProps {
+  /** Keeps ids unique when the sidebar is mounted more than once. */
+  idPrefix: string;
   filters: IPlaceFilters;
   sort: PlaceSort;
   categories: IPlaceCategory[];
@@ -32,6 +34,7 @@ const sortOptions: Array<{ value: PlaceSort; label: string }> = [
 ];
 
 export function MapFilters({
+  idPrefix,
   filters,
   sort,
   categories,
@@ -146,13 +149,13 @@ export function MapFilters({
 
       <div className="space-y-1.5">
         <label
-          htmlFor="map-sort"
+          htmlFor={`${idPrefix}-sort`}
           className="text-xs font-semibold tracking-wide text-muted-foreground uppercase"
         >
           Sort results
         </label>
         <Select
-          id="map-sort"
+          id={`${idPrefix}-sort`}
           value={sort}
           onChange={(event) => onSortChange(event.target.value as PlaceSort)}
           className="h-9"

@@ -1,6 +1,6 @@
 "use client";
 
-import { SlidersHorizontal } from "lucide-react";
+import { List, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { IMapActions } from "@/components/map/map-view";
 import { MapView } from "@/components/map/map-view";
@@ -51,8 +51,8 @@ const distanceOf = (
   const h =
     Math.sin(deltaLat / 2) ** 2 +
     Math.cos(toRadians(origin.latitude)) *
-    Math.cos(toRadians(place.latitude)) *
-    Math.sin(deltaLng / 2) ** 2;
+      Math.cos(toRadians(place.latitude)) *
+      Math.sin(deltaLng / 2) ** 2;
 
   return 2 * 6_371_000 * Math.asin(Math.min(1, Math.sqrt(h)));
 };
@@ -191,6 +191,9 @@ export function MapExplorer() {
   const error = searchActive ? search.error : (explore.error ?? nearby.error);
 
   const selectPlace = useCallback((place: IPlaceCard | null) => {
+    // A selection always shows the detail card in place of the mobile list.
+    setPanelOpen(false);
+
     if (!place) {
       setSelectedId(null);
       setSelectedPlace(null);
@@ -201,6 +204,18 @@ export function MapExplorer() {
     setSelectedPlace(place);
     mapActions.current?.flyTo([place.longitude, place.latitude]);
   }, []);
+
+  // Escape closes the mobile list overlay, mirroring a dialog.
+  useEffect(() => {
+    if (!panelOpen) return;
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setPanelOpen(false);
+    };
+
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [panelOpen]);
 
   const handleSelectById = useCallback(
     (placeId: string | null) => {
@@ -275,8 +290,9 @@ export function MapExplorer() {
       ? "Within 5 km of your location"
       : "Move or zoom the map to explore other areas";
 
-  const sidebar = (
+  const sidebar = (idPrefix: string) => (
     <MapSidebar
+      idPrefix={idPrefix}
       query={query}
       onQueryChange={setQuery}
       suggestions={suggestions}
@@ -301,39 +317,14 @@ export function MapExplorer() {
   );
 
   return (
-    <div className="flex h-full min-h-0 flex-1 flex-col gap-3 lg:overflow-hidden">
-      <div className="flex items-center justify-between gap-2 lg:hidden">
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() => setPanelOpen((open) => !open)}
-          aria-expanded={panelOpen}
-          aria-controls="map-mobile-panel"
-        >
-          <SlidersHorizontal aria-hidden="true" className="size-3.5" />
-          {panelOpen ? "Hide search & filters" : "Search & filters"}
-        </Button>
-        <span className="text-xs text-muted-foreground">
-          {cards.length} {listLabel.toLowerCase()}
-        </span>
-      </div>
-
-      {panelOpen && (
-        <div
-          id="map-mobile-panel"
-          className="max-h-[70vh] overflow-y-auto rounded-xl border border-border bg-card lg:hidden"
-        >
-          {sidebar}
-        </div>
-      )}
-
-      <div className="grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)] gap-3 lg:grid-cols-[21rem_1fr]">
+    <div className="flex h-full min-h-0 flex-col overflow-hidden">
+      {/* Rail on desktop, full-height map on mobile (list opens as a sheet). */}
+      <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 lg:grid-cols-[21.5rem_minmax(0,1fr)]">
         <aside className="hidden min-h-0 overflow-hidden rounded-xl border border-border bg-card lg:flex lg:flex-col">
-          {sidebar}
+          {sidebar("map-desktop")}
         </aside>
 
-        <div className="relative min-h-0 min-w-0 overflow-hidden rounded-xl border border-border">
+        <div className="relative min-h-0 min-w-0 overflow-hidden rounded-xl border border-border bg-muted">
           <MapView
             ref={mapActions}
             features={mapFeatures}
@@ -368,6 +359,52 @@ export function MapExplorer() {
               userPosition={userLocation.position}
               onClose={() => selectPlace(null)}
             />
+          )}
+
+          {/* Mobile: the list floats over the map so the map keeps its height. */}
+          {!selectedPlace && !panelOpen && (
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => setPanelOpen(true)}
+              aria-expanded={panelOpen}
+              aria-controls="map-mobile-panel"
+              className="absolute bottom-3 left-3 z-20 rounded-full shadow-lg sm:left-1/2 sm:-translate-x-1/2 lg:hidden"
+            >
+              <List aria-hidden="true" className="size-3.5" />
+              Places · {cards.length}
+            </Button>
+          )}
+
+          {panelOpen && !selectedPlace && (
+            <div className="absolute inset-0 z-30 flex flex-col justify-end lg:hidden">
+              <button
+                type="button"
+                aria-label="Close place list"
+                onClick={() => setPanelOpen(false)}
+                className="absolute inset-0 bg-background/50"
+              />
+
+              <div
+                id="map-mobile-panel"
+                className="relative flex max-h-[82%] min-h-0 flex-col overflow-hidden rounded-t-xl border-t border-border bg-card shadow-2xl"
+              >
+                <div className="flex shrink-0 items-center justify-between gap-2 border-b border-border px-3 py-2">
+                  <p className="text-sm font-semibold">{listLabel}</p>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    onClick={() => setPanelOpen(false)}
+                    aria-label="Close place list"
+                  >
+                    <X aria-hidden="true" />
+                  </Button>
+                </div>
+
+                <div className="min-h-0 flex-1">{sidebar("map-mobile")}</div>
+              </div>
+            </div>
           )}
         </div>
       </div>

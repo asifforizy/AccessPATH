@@ -10,6 +10,8 @@ import type { IPlaceCard } from "@/types/place.types";
 import { CategoryIcon, VerificationBadge } from "./map-meta";
 
 interface MapSearchProps {
+  /** Keeps ids unique when the sidebar is mounted more than once. */
+  idPrefix: string;
   value: string;
   onChange: (value: string) => void;
   suggestions: IPlaceCard[];
@@ -22,6 +24,7 @@ interface MapSearchProps {
  * The debouncing itself happens in `usePlaceSearch` before any request is sent.
  */
 export function MapSearch({
+  idPrefix,
   value,
   onChange,
   suggestions,
@@ -31,7 +34,8 @@ export function MapSearch({
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const listboxId = "map-search-suggestions";
+  const listboxId = `${idPrefix}-search-suggestions`;
+  const inputId = `${idPrefix}-search-input`;
 
   const visibleSuggestions =
     value.trim().length >= 2 ? suggestions.slice(0, 5) : [];
@@ -85,7 +89,7 @@ export function MapSearch({
 
   return (
     <div ref={containerRef} className="relative">
-      <label htmlFor="map-search-input" className="sr-only">
+      <label htmlFor={inputId} className="sr-only">
         Search accessible places by name or address
       </label>
 
@@ -96,7 +100,7 @@ export function MapSearch({
         />
 
         <Input
-          id="map-search-input"
+          id={inputId}
           type="search"
           value={value}
           placeholder="Search places or addresses"
@@ -107,7 +111,7 @@ export function MapSearch({
           aria-autocomplete="list"
           aria-activedescendant={
             showList && activeIndex >= 0
-              ? `map-suggestion-${activeIndex}`
+              ? `${idPrefix}-suggestion-${activeIndex}`
               : undefined
           }
           className="h-9 pr-8 pl-8"
@@ -153,7 +157,7 @@ export function MapSearch({
             <button
               type="button"
               key={suggestion.id}
-              id={`map-suggestion-${index}`}
+              id={`${idPrefix}-suggestion-${index}`}
               role="option"
               aria-selected={index === activeIndex}
               className={cn(
