@@ -35,7 +35,10 @@ const locationCardSelect = {
 			stepFreeEntrance: true,
 		},
 	},
-	photos: { where: { isPrimary: true }, take: 1 },
+	photos: {
+		orderBy: [{ isPrimary: "desc" }, { createdAt: "asc" }],
+		take: 1,
+	},
 	_count: {
 		select: { reviews: true, favorites: true, reports: true },
 	},

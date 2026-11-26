@@ -60,7 +60,7 @@ export function MapSidebar({
   onRetry,
 }: MapSidebarProps) {
   return (
-    <div className="flex h-full min-h-0 flex-col">
+    <div className="h-full overflow-y-auto">
       <div className="space-y-3 border-b border-border p-4">
         <MapSearch
           value={query}
@@ -82,7 +82,7 @@ export function MapSidebar({
         />
       </div>
 
-      <div className="flex min-h-0 flex-1 flex-col">
+      <div className="flex flex-col">
         <div className="flex items-baseline justify-between gap-2 px-4 pt-3">
           <h2 className="text-sm font-semibold">{listLabel}</h2>
           <span className="text-xs text-muted-foreground">
@@ -94,7 +94,7 @@ export function MapSidebar({
           <p className="px-4 pt-1 text-xs text-muted-foreground">{listHint}</p>
         )}
 
-        <div className="min-h-0 flex-1 space-y-2 overflow-y-auto px-4 py-3">
+        <div className="space-y-2 px-4 py-3">
           {loading && cards.length === 0 && (
             <p className="flex items-center gap-2 rounded-lg border border-dashed border-border p-4 text-xs text-muted-foreground">
               <Loader2 aria-hidden="true" className="size-3.5 animate-spin" />

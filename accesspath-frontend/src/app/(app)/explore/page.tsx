@@ -1,4 +1,4 @@
-import { MapPin, MapPinned, Star } from "lucide-react";
+import { ImageOff, MapPin, MapPinned, Star } from "lucide-react";
 import Link from "next/link";
 
 import { EmptyState } from "@/components/shared/empty-state";
@@ -87,32 +87,76 @@ export default async function ExplorePage({
       </form>
 
       {locations.length ? (
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {locations.map((location) => {
             const accessibility = location.accessibility;
+            const photo = location.photos?.[0];
 
             return (
-              <Link key={location.id} href={`/explore/${location.id}`}>
-                <Card className="h-full transition-colors hover:border-primary/40">
-                  <CardContent className="flex h-full flex-col gap-3">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <p className="truncate font-semibold">
-                          {location.name}
-                        </p>
-                        <p className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
-                          <MapPin className="size-3 shrink-0" />
-                          <span className="truncate">
-                            {location.city}
-                            {location.country ? `, ${location.country}` : ""}
-                          </span>
-                        </p>
+              <Link
+                key={location.id}
+                href={`/explore/${location.id}`}
+                className="group block h-full"
+              >
+                <Card className="h-full gap-0 overflow-hidden p-0 transition-all hover:shadow-lg hover:ring-primary/40">
+                  <div className="relative aspect-[16/10] overflow-hidden bg-gradient-to-br from-primary/15 via-muted to-background">
+                    {photo ? (
+                      <img
+                        src={photo.url}
+                        alt={location.name}
+                        loading="lazy"
+                        className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                      />
+                    ) : (
+                      <div className="flex h-full w-full flex-col items-center justify-center gap-2">
+                        <ImageOff
+                          aria-hidden="true"
+                          className="size-10 text-primary/50"
+                        />
+                        <span className="text-xs font-medium text-muted-foreground">
+                          No photo yet
+                        </span>
                       </div>
+                    )}
+
+                    <div className="absolute inset-x-0 top-0 flex items-start justify-between gap-2 p-3">
                       {location.category && (
-                        <Badge variant="outline">
+                        <Badge
+                          variant="secondary"
+                          className="bg-background/90 text-foreground shadow-sm backdrop-blur"
+                        >
                           {location.category.name}
                         </Badge>
                       )}
+                      {typeof accessibility?.accessibilityScore ===
+                        "number" && (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-background/90 px-2.5 py-1 text-xs font-semibold text-primary shadow-sm backdrop-blur">
+                          <Star
+                            aria-hidden="true"
+                            className="size-3.5 fill-current"
+                          />
+                          {accessibility.accessibilityScore}
+                          <span className="sr-only">out of 100</span>
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <CardContent className="flex flex-1 flex-col gap-3 p-4">
+                    <div className="min-w-0">
+                      <h3 className="truncate font-semibold transition-colors group-hover:text-primary">
+                        {location.name}
+                      </h3>
+                      <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
+                        <MapPin
+                          aria-hidden="true"
+                          className="size-3 shrink-0"
+                        />
+                        <span className="truncate">
+                          {location.city}
+                          {location.country ? `, ${location.country}` : ""}
+                        </span>
+                      </p>
                     </div>
 
                     {location.description && (
@@ -122,19 +166,10 @@ export default async function ExplorePage({
                     )}
 
                     <div className="mt-auto space-y-2">
-                      {typeof accessibility?.accessibilityScore ===
-                        "number" && (
-                        <p className="flex items-center gap-1.5 text-xs font-medium">
-                          <Star className="size-3.5 text-amber-500" />
-                          Accessibility score {accessibility.accessibilityScore}
-                          /100
-                          {accessibility.isVerified && (
-                            <Badge variant="success">Verified</Badge>
-                          )}
-                        </p>
-                      )}
-
                       <div className="flex flex-wrap gap-1">
+                        {accessibility?.isVerified && (
+                          <Badge variant="success">Verified</Badge>
+                        )}
                         {accessibility?.wheelchairAccessible && (
                           <Badge variant="success">Wheelchair</Badge>
                         )}

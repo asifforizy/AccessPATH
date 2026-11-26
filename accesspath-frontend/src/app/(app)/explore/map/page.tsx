@@ -1,3 +1,4 @@
+
 import { List } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -12,10 +13,13 @@ export const metadata: Metadata = {
 
 export default function ExploreMapPage() {
   return (
-    <div className="space-y-3">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+    <div className="flex h-full min-h-0 flex-col gap-3">
+      <div className="flex shrink-0 flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Map explorer</h1>
+          <h1 className="text-2xl font-bold tracking-tight">
+            Map explore
+          </h1>
+
           <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
             Browse verified accessibility information on the map. Unknown
             accessibility data is shown as unknown — never as confirmed
@@ -34,7 +38,9 @@ export default function ExploreMapPage() {
         </Button>
       </div>
 
-      <MapExplorer />
+      <div className="min-h-0 flex-1">
+        <MapExplorer />
+      </div>
     </div>
   );
 }

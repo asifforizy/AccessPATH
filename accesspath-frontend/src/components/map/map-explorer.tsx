@@ -51,8 +51,8 @@ const distanceOf = (
   const h =
     Math.sin(deltaLat / 2) ** 2 +
     Math.cos(toRadians(origin.latitude)) *
-      Math.cos(toRadians(place.latitude)) *
-      Math.sin(deltaLng / 2) ** 2;
+    Math.cos(toRadians(place.latitude)) *
+    Math.sin(deltaLng / 2) ** 2;
 
   return 2 * 6_371_000 * Math.asin(Math.min(1, Math.sqrt(h)));
 };
@@ -301,7 +301,7 @@ export function MapExplorer() {
   );
 
   return (
-    <div className="flex flex-col gap-3 lg:h-[calc(100dvh-12rem)] lg:min-h-[620px]">
+    <div className="flex h-full min-h-0 flex-1 flex-col gap-3 lg:overflow-hidden">
       <div className="flex items-center justify-between gap-2 lg:hidden">
         <Button
           type="button"
@@ -322,18 +322,18 @@ export function MapExplorer() {
       {panelOpen && (
         <div
           id="map-mobile-panel"
-          className="max-h-[70vh] overflow-hidden rounded-xl border border-border bg-card lg:hidden"
+          className="max-h-[70vh] overflow-y-auto rounded-xl border border-border bg-card lg:hidden"
         >
           {sidebar}
         </div>
       )}
 
-      <div className="grid min-h-0 flex-1 gap-3 lg:grid-cols-[21rem_1fr]">
+      <div className="grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)] gap-3 lg:grid-cols-[21rem_1fr]">
         <aside className="hidden min-h-0 overflow-hidden rounded-xl border border-border bg-card lg:flex lg:flex-col">
           {sidebar}
         </aside>
 
-        <div className="relative min-h-[420px] overflow-hidden rounded-xl border border-border lg:min-h-0">
+        <div className="relative min-h-0 min-w-0 overflow-hidden rounded-xl border border-border">
           <MapView
             ref={mapActions}
             features={mapFeatures}
