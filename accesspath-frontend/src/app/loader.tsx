@@ -1,5 +1,4 @@
-
-import { Spinner } from "@/components/ui/spinner"
+import { Spinner } from "@/components/ui/spinner";
 
 const GlobalLoading = () => {
   return (
@@ -17,7 +16,7 @@ const GlobalLoading = () => {
         </div>
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default GlobalLoading
+export default GlobalLoading;

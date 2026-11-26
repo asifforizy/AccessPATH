@@ -1,12 +1,12 @@
-import { getMyContributions } from "@/services/getmyContributions";
-import { getMyReports } from "@/services/getMyReports";
-import { getUserMe } from "@/services/me";
 import { redirect } from "next/navigation";
-import { getProfileTabs } from "./_components/tabs";
-import { ProfileHeader } from "./_components/profileHeader";
-import { ProfileOverview } from "./_components/profileOverview";
+import { getMyReports } from "@/services/getMyReports";
+import { getMyContributions } from "@/services/getmyContributions";
+import { getUserMe } from "@/services/me";
 import { ProfileCard } from "./_components/card";
 import { EmptyState } from "./_components/emptyState";
+import { ProfileHeader } from "./_components/profileHeader";
+import { ProfileOverview } from "./_components/profileOverview";
+import { getProfileTabs } from "./_components/tabs";
 
 type SearchParams = Promise<{ tab?: string }>;
 
@@ -48,3 +48,6 @@ export default async function ProfilePage({
     </main>
   );
 }
+
+// Every surface here is cookie-authenticated and dynamic; allow blocking render.
+export const instant = false;

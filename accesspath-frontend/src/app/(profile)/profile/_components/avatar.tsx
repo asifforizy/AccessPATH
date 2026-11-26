@@ -1,7 +1,7 @@
 interface UserAvatarProps {
   name: string;
   image: string | null;
-  width?: number;  // px
+  width?: number; // px
   height?: number; // px
 }
 

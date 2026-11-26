@@ -1,5 +1,5 @@
-import { IRecentItem } from "@/utils/types";
 import { cookies } from "next/headers";
+import type { IRecentItem } from "@/utils/types";
 
 export const getMyReports = async (limit = 3): Promise<IRecentItem[]> => {
   const cookieStore = await cookies();

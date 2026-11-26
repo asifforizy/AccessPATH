@@ -1,11 +1,9 @@
-import { IMe, ProfileHeaderProps } from "@/utils/types";
-import { UserAvatar } from "./avatar";
 import { formatDate } from "@/lib/format";
-import { ProfileStats } from "./stats";
+import { IMe, type ProfileHeaderProps } from "@/utils/types";
+import { UserAvatar } from "./avatar";
 import { ProfileDetails } from "./details";
+import { ProfileStats } from "./stats";
 import { ProfileTabs } from "./tabs";
-
-
 
 export function ProfileHeader({ user, activeTab }: ProfileHeaderProps) {
   return (

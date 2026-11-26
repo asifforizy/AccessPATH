@@ -1,4 +1,4 @@
-import { IMe } from "@/utils/types";
+import type { IMe } from "@/utils/types";
 
 export function ProfileStats({ counts }: { counts: IMe["_count"] }) {
   const stats = [

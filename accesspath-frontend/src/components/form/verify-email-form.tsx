@@ -1,8 +1,8 @@
 "use client";
 
+import { Loader2, MailCheck } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
-import { Loader2, MailCheck } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -16,10 +16,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { verifyEmail } from "@/services/verify-email";
-
-
-
-
 
 export function VerifyEmailForm() {
   const router = useRouter();
@@ -56,7 +52,7 @@ export function VerifyEmailForm() {
       router.refresh();
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "Email verification failed"
+        error instanceof Error ? error.message : "Email verification failed",
       );
     } finally {
       setLoading(false);
@@ -69,8 +65,8 @@ export function VerifyEmailForm() {
         <MailCheck className="mx-auto mb-3 size-10 text-primary" />
         <CardTitle>Verify your email</CardTitle>
         <CardDescription>
-          We sent a 6-digit code to {email || "your email"}. Enter it below.
-          The code expires in 5 minutes.
+          We sent a 6-digit code to {email || "your email"}. Enter it below. The
+          code expires in 5 minutes.
         </CardDescription>
       </CardHeader>
 

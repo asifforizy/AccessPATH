@@ -1,5 +1,5 @@
 import { formatDate } from "@/lib/format";
-import { IMe } from "@/utils/types";
+import type { IMe } from "@/utils/types";
 
 export function ProfileDetails({ user }: { user: IMe }) {
   return (
@@ -7,9 +7,7 @@ export function ProfileDetails({ user }: { user: IMe }) {
       <dt className="text-muted-foreground">Email:</dt>
       <dd className="text-foreground">
         <span className="block">{user.email}</span>
-        {user.emailVerifiedAt && (
-          <span className="text-success">Verified</span>
-        )}
+        {user.emailVerifiedAt && <span className="text-success">Verified</span>}
       </dd>
 
       <dt className="text-muted-foreground">Joined:</dt>

@@ -1,13 +1,12 @@
-
 import type { Metadata } from "next";
-import { Suspense, type ReactNode } from "react";
 import { Inter } from "next/font/google";
+import { type ReactNode, Suspense } from "react";
 import "./globals.css";
 import { Toaster } from "sonner";
-import { GoogleProvider } from "@/provider/google-provider";
-import { ThemeProvider } from "@/components/shared/theme-provider";
 import { Footer } from "@/components/shared/footer";
+import { ThemeProvider } from "@/components/shared/theme-provider";
 import { AuthUser } from "@/provider/auth-user";
+import { GoogleProvider } from "@/provider/google-provider";
 
 const inter = Inter({
   subsets: ["latin"],

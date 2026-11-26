@@ -1,5 +1,5 @@
 import { formatDate } from "@/lib/format";
-import { IMe } from "@/utils/types";
+import type { IMe } from "@/utils/types";
 
 export function ProfileDetails({ user }: { user: IMe }) {
   return (

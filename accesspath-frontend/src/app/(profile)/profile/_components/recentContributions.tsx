@@ -1,7 +1,7 @@
-import { IRecentItem } from "@/utils/types";
+import { timeAgo } from "@/lib/format";
+import type { IRecentItem } from "@/utils/types";
 import { ProfileCard } from "./card";
 import { EmptyState } from "./emptyState";
-import { timeAgo } from "@/lib/format";
 
 export function RecentContributions({ items }: { items: IRecentItem[] }) {
   return (

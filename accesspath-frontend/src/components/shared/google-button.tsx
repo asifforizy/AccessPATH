@@ -1,12 +1,10 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { GoogleLogin } from "@react-oauth/google";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { googleLogin } from "@/services/google";
 import { refreshProfile } from "@/services/refresh-profile";
-
-
 
 export function GoogleAuthButton() {
   const router = useRouter();
@@ -33,7 +31,7 @@ export function GoogleAuthButton() {
             router.refresh();
           } catch (error) {
             toast.error(
-              error instanceof Error ? error.message : "Google login failed"
+              error instanceof Error ? error.message : "Google login failed",
             );
           }
         }}

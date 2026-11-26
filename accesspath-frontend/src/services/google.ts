@@ -13,12 +13,17 @@ export async function googleLogin(payload: { idToken: string }) {
   const data = await res.json().catch(() => null);
 
   if (!res.ok) {
-    return { success: false as const, message: data?.message || "Google login failed" };
+    return {
+      success: false as const,
+      message: data?.message || "Google login failed",
+    };
   }
 
   // Tokens may come in the response body or in the backend's Set-Cookie headers
-  let accessToken: string | undefined = data?.data?.accessToken ?? data?.accessToken;
-  let refreshToken: string | undefined = data?.data?.refreshToken ?? data?.refreshToken;
+  let accessToken: string | undefined =
+    data?.data?.accessToken ?? data?.accessToken;
+  let refreshToken: string | undefined =
+    data?.data?.refreshToken ?? data?.refreshToken;
 
   if (!accessToken) {
     for (const line of res.headers.getSetCookie()) {
@@ -34,7 +39,8 @@ export async function googleLogin(payload: { idToken: string }) {
   if (!accessToken) {
     return {
       success: false as const,
-      message: "Google login worked, but no accessToken was found in the response",
+      message:
+        "Google login worked, but no accessToken was found in the response",
     };
   }
 
@@ -47,10 +53,16 @@ export async function googleLogin(payload: { idToken: string }) {
     path: "/",
   };
 
-  cookieStore.set("accessToken", accessToken, { ...options, maxAge: 60 * 60 * 24 });
+  cookieStore.set("accessToken", accessToken, {
+    ...options,
+    maxAge: 60 * 60 * 24,
+  });
 
   if (refreshToken) {
-    cookieStore.set("refreshToken", refreshToken, { ...options, maxAge: 60 * 60 * 24 * 7 });
+    cookieStore.set("refreshToken", refreshToken, {
+      ...options,
+      maxAge: 60 * 60 * 24 * 7,
+    });
   }
 
   return { success: true as const, data };

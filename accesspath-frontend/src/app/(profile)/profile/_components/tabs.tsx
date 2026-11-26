@@ -1,5 +1,5 @@
-import { IMe } from "@/utils/types";
 import Link from "next/link";
+import type { IMe } from "@/utils/types";
 
 export const getProfileTabs = (counts: IMe["_count"]) => [
   { key: "overview", label: "Overview" },

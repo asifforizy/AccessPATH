@@ -1,8 +1,7 @@
-import { IMe, IRecentItem, ProfileOverviewProps } from "@/utils/types";
+import { IMe, IRecentItem, type ProfileOverviewProps } from "@/utils/types";
 import { RecentContributions } from "./recentContributions";
-import { RecentReviews } from "./recentreviews";
 import { RecentReports } from "./recentReports";
-
+import { RecentReviews } from "./recentreviews";
 
 export function ProfileOverview({
   user,

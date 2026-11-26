@@ -14,7 +14,9 @@ export function ProfileCard({ title, href, icon, children }: ProfileCardProps) {
       <header className="flex items-center justify-between gap-3 border-b border-border px-5 py-3.5">
         <div className="flex items-center gap-2">
           {icon}
-          <h2 className="text-sm font-semibold text-card-foreground">{title}</h2>
+          <h2 className="text-sm font-semibold text-card-foreground">
+            {title}
+          </h2>
         </div>
         {href && (
           <Link
