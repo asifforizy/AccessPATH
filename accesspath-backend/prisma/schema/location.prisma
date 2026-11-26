@@ -38,6 +38,8 @@ model Location {
   updatedAt   DateTime       @updatedAt
   deletedAt   DateTime?
 
+  @@index([name])
+  @@index([address])
   @@index([categoryId, status])
   @@index([city, country])
   @@index([latitude, longitude])

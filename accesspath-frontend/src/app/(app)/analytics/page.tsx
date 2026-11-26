@@ -1,5 +1,10 @@
 import { redirect } from "next/navigation";
 
+import {
+  AccessibilityDistributionChart,
+  CategoryDistributionChart,
+  MonthlyTrendsChart,
+} from "@/components/charts/analytics-charts";
 import { PageHeader } from "@/components/shared/page-header";
 import { StatGrid } from "@/components/shared/stat-grid";
 import { Badge } from "@/components/ui/badge";
@@ -194,29 +199,10 @@ export default async function AnalyticsPage() {
               {accessibility.data?.verified ?? 0} verified.
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-2">
-            {accessibility.data?.buckets?.map((bucket) => {
-              const total = accessibility.data?.total ?? 0;
-              const width = total ? (bucket.count / total) * 100 : 0;
-
-              return (
-                <div
-                  key={bucket.range}
-                  className="flex items-center gap-2 text-xs"
-                >
-                  <span className="w-14">{bucket.range}</span>
-                  <div className="h-2 flex-1 overflow-hidden rounded-full bg-muted">
-                    <div
-                      className="h-full rounded-full bg-primary"
-                      style={{ width: `${width}%` }}
-                    />
-                  </div>
-                  <span className="w-6 text-right text-muted-foreground">
-                    {bucket.count}
-                  </span>
-                </div>
-              );
-            })}
+          <CardContent>
+            <AccessibilityDistributionChart
+              data={accessibility.data?.buckets ?? []}
+            />
           </CardContent>
         </Card>
       </div>
@@ -226,31 +212,8 @@ export default async function AnalyticsPage() {
           <CardTitle>Monthly trends</CardTitle>
           <CardDescription>Activity over the last 12 months.</CardDescription>
         </CardHeader>
-        <CardContent className="overflow-x-auto">
-          <table className="w-full min-w-125 text-left text-xs">
-            <thead className="text-muted-foreground">
-              <tr>
-                <th className="py-2">Month</th>
-                <th>Users</th>
-                <th>Locations</th>
-                <th>Reports</th>
-                <th>Contributions</th>
-                <th>Reviews</th>
-              </tr>
-            </thead>
-            <tbody>
-              {trends.data?.map((row) => (
-                <tr key={row.month} className="border-t">
-                  <td className="py-1.5 font-medium">{row.month}</td>
-                  <td>{row.users}</td>
-                  <td>{row.locations}</td>
-                  <td>{row.reports}</td>
-                  <td>{row.contributions}</td>
-                  <td>{row.reviews}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <CardContent>
+          <MonthlyTrendsChart data={trends.data ?? []} />
         </CardContent>
       </Card>
 
@@ -284,19 +247,9 @@ export default async function AnalyticsPage() {
             <CardTitle>Category distribution</CardTitle>
             <CardDescription>Locations per category.</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-1 text-sm">
+          <CardContent>
             {categories.data?.length ? (
-              categories.data.map((category) => (
-                <div
-                  key={category.categoryId}
-                  className="flex items-center justify-between"
-                >
-                  <span>{category.name}</span>
-                  <span className="text-muted-foreground">
-                    {category.count}
-                  </span>
-                </div>
-              ))
+              <CategoryDistributionChart data={categories.data} />
             ) : (
               <p className="text-xs text-muted-foreground">No data.</p>
             )}

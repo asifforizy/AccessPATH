@@ -96,7 +96,7 @@ const listReports = async (
 const createReport = async (userId: string, payload: ICreateReportPayload) => {
 	const location = await prisma.location.findFirst({
 		where: { id: payload.locationId, deletedAt: null },
-		select: { id: true },
+		select: { id: true, latitude: true, longitude: true },
 	});
 
 	if (!location) {
@@ -109,6 +109,9 @@ const createReport = async (userId: string, payload: ICreateReportPayload) => {
 			reporterId: userId,
 			type: payload.type as ReportType,
 			description: payload.description,
+			// Explicit GPS wins; otherwise the barrier is pinned to the location.
+			latitude: payload.latitude ?? location.latitude,
+			longitude: payload.longitude ?? location.longitude,
 			attachments: payload.attachments?.length
 				? {
 						create: payload.attachments.map((attachment) => ({

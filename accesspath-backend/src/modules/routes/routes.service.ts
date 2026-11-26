@@ -11,6 +11,20 @@ import { AppError } from "../../utils/AppError";
 import { haversineMeters, roundMeters } from "../../utils/geo";
 import { asJson, toJson } from "../../utils/json";
 import type {
+	BarrierType,
+	IEngineWaypoint,
+	IRouteBarrierContext,
+	IRouteCandidate,
+	IRouteLocationContext,
+	IRouteRequirements,
+} from "./routes.engine";
+import {
+	buildRouteCandidates,
+	candidatesBounds,
+	distanceBetween,
+	scoreRouteCandidates,
+} from "./routes.engine";
+import type {
 	IAlternativesPayload,
 	IFeedbackPayload,
 	IPlanPayload,
@@ -40,42 +54,129 @@ const FEATURE_KEYS = [
 
 const speedFor = (mode: TravelMode) => TRAVEL_SPEEDS[mode] ?? 1.4;
 
-const formatDuration = (seconds: number) => {
-	const minutes = Math.round(seconds / 60);
-	if (minutes < 60) {
-		return `${minutes} min`;
-	}
+const ACTIVE_REPORT_STATUSES = [
+	ReportStatus.PENDING,
+	ReportStatus.UNDER_REVIEW,
+];
 
-	const hours = Math.floor(minutes / 60);
-	const rest = minutes % 60;
-	return `${hours}h ${rest}m`;
+/**
+ * Loads the accessibility context (approved locations with profiles + live
+ * barrier reports) around every candidate corridor in one round trip.
+ */
+const loadRouteContext = async (candidates: IRouteCandidate[]) => {
+	const bounds = candidatesBounds(candidates);
+
+	const [locations, reports] = await Promise.all([
+		prisma.location.findMany({
+			where: {
+				status: LocationStatus.APPROVED,
+				deletedAt: null,
+				latitude: { gte: bounds.south, lte: bounds.north },
+				longitude: { gte: bounds.west, lte: bounds.east },
+				accessibility: { isNot: null },
+			},
+			select: {
+				id: true,
+				name: true,
+				latitude: true,
+				longitude: true,
+				accessibility: true,
+			},
+			take: 2_000,
+		}),
+		prisma.accessibilityReport.findMany({
+			where: {
+				status: { in: ACTIVE_REPORT_STATUSES },
+				OR: [
+					{
+						latitude: { gte: bounds.south, lte: bounds.north },
+						longitude: { gte: bounds.west, lte: bounds.east },
+					},
+					{
+						latitude: null,
+						location: {
+							latitude: { gte: bounds.south, lte: bounds.north },
+							longitude: { gte: bounds.west, lte: bounds.east },
+						},
+					},
+				],
+			},
+			select: {
+				id: true,
+				type: true,
+				description: true,
+				status: true,
+				latitude: true,
+				longitude: true,
+				locationId: true,
+				location: { select: { name: true, latitude: true, longitude: true } },
+			},
+			take: 1_000,
+		}),
+	]);
+
+	const locationContext: IRouteLocationContext[] = locations
+		.filter((location) => location.accessibility)
+		.map((location) => ({
+			id: location.id,
+			name: location.name,
+			latitude: location.latitude,
+			longitude: location.longitude,
+			accessibilityScore: location.accessibility?.accessibilityScore ?? null,
+			isVerified: location.accessibility?.isVerified ?? false,
+			stepFreeEntrance: location.accessibility?.stepFreeEntrance ?? false,
+			rampAvailable: location.accessibility?.rampAvailable ?? false,
+			elevatorAvailable: location.accessibility?.elevatorAvailable ?? false,
+			accessibleRestroom: location.accessibility?.accessibleRestroom ?? false,
+			accessibleParking: location.accessibility?.accessibleParking ?? false,
+			doorAccessibility: location.accessibility?.doorAccessibility ?? false,
+		}));
+
+	const barrierContext: IRouteBarrierContext[] = reports.map((report) => ({
+		id: report.id,
+		type: report.type as BarrierType,
+		description: report.description,
+		status: report.status as "PENDING" | "UNDER_REVIEW",
+		latitude: report.latitude ?? report.location?.latitude ?? 0,
+		longitude: report.longitude ?? report.location?.longitude ?? 0,
+		locationId: report.locationId,
+		locationName: report.location?.name ?? null,
+	}));
+
+	return { locations: locationContext, barriers: barrierContext };
 };
 
-const buildRoute = (payload: IPlanPayload) => {
+const buildRankedOptions = async (payload: IPlanPayload) => {
 	const travelMode = (payload.travelMode ?? TravelMode.WALKING) as TravelMode;
-	const distanceMeters = roundMeters(
-		haversineMeters(payload.origin, payload.destination),
+	const candidates = buildRouteCandidates(
+		payload.origin,
+		payload.destination,
+		4,
 	);
+	const context = await loadRouteContext(candidates);
 
-	return {
-		travelMode,
-		distanceMeters,
-		durationSeconds: Math.round(distanceMeters / speedFor(travelMode)),
-		waypoints: [
-			{
-				latitude: payload.origin.latitude,
-				longitude: payload.origin.longitude,
-			},
-			{
-				latitude: payload.destination.latitude,
-				longitude: payload.destination.longitude,
-			},
-		],
-	};
+	return scoreRouteCandidates({
+		candidates,
+		locations: context.locations,
+		barriers: context.barriers,
+		travelMode: travelMode as never,
+		requirements: (payload.accessibilityRequirements ?? undefined) as
+			| IRouteRequirements
+			| undefined,
+	});
 };
 
 const planRoute = async (userId: string, payload: IPlanPayload) => {
-	const route = buildRoute(payload);
+	const options = await buildRankedOptions(payload);
+	const best = options[0];
+
+	if (!best) {
+		throw new AppError(
+			httpStatus.INTERNAL_SERVER_ERROR,
+			"Route options could not be generated",
+		);
+	}
+
 	let routeId: string | null = null;
 
 	if (payload.save) {
@@ -88,11 +189,15 @@ const planRoute = async (userId: string, payload: IPlanPayload) => {
 				destinationName: payload.destination.name ?? "Destination",
 				destinationLatitude: payload.destination.latitude,
 				destinationLongitude: payload.destination.longitude,
-				travelMode: route.travelMode,
-				distanceMeters: route.distanceMeters,
-				durationSeconds: route.durationSeconds,
+				travelMode: best.travelMode as TravelMode,
+				distanceMeters: best.distanceMeters,
+				durationSeconds: best.durationSeconds,
 				routeData: asJson({
-					waypoints: route.waypoints,
+					waypoints: best.waypoints,
+					accessibilityScore: best.accessibilityScore,
+					breakdown: best.breakdown,
+					warnings: best.warnings,
+					support: best.support,
 					generatedAt: new Date().toISOString(),
 				}),
 				accessibilityRequirements: toJson(payload.accessibilityRequirements),
@@ -107,41 +212,48 @@ const planRoute = async (userId: string, payload: IPlanPayload) => {
 		routeId,
 		origin: payload.origin,
 		destination: payload.destination,
-		travelMode: route.travelMode,
-		distanceMeters: route.distanceMeters,
-		durationSeconds: route.durationSeconds,
-		distanceText: `${(route.distanceMeters / 1000).toFixed(2)} km`,
-		durationText: formatDuration(route.durationSeconds),
-		waypoints: route.waypoints,
+		travelMode: best.travelMode,
+		distanceMeters: best.distanceMeters,
+		durationSeconds: best.durationSeconds,
+		distanceText: best.distanceText,
+		durationText: best.durationText,
+		waypoints: best.waypoints,
+		accessibilityScore: best.accessibilityScore,
+		grade: best.grade,
+		accessibilityBreakdown: best.breakdown,
+		warnings: best.warnings,
+		support: best.support,
+		alternatives: options.map((option) => ({
+			id: option.id,
+			label: option.label,
+			kind: option.kind,
+			recommended: option.recommended,
+			waypoints: option.waypoints,
+			distanceMeters: option.distanceMeters,
+			durationSeconds: option.durationSeconds,
+			distanceText: option.distanceText,
+			durationText: option.durationText,
+			accessibilityScore: option.accessibilityScore,
+			grade: option.grade,
+			detourPercent: option.detourPercent,
+			breakdown: option.breakdown,
+			warnings: option.warnings,
+			support: option.support,
+		})),
 		accessibilityRequirements: payload.accessibilityRequirements ?? null,
 		isSaved: Boolean(routeId),
 	};
 };
 
-const getAlternatives = (payload: IAlternativesPayload) => {
-	const base = buildRoute(payload);
-	const labels = ["Fastest", "Most accessible", "Shortest", "Scenic"];
-	const factors = [1, 1.12, 0.94, 1.2];
-
-	const alternatives = Array.from({ length: payload.count }, (_, index) => {
-		const distanceMeters = roundMeters(
-			base.distanceMeters * (factors[index] ?? 1 + index * 0.05),
-		);
-
-		return {
-			label: labels[index] ?? `Option ${index + 1}`,
-			travelMode: base.travelMode,
-			distanceMeters,
-			durationSeconds: Math.round(distanceMeters / speedFor(base.travelMode)),
-			distanceText: `${(distanceMeters / 1000).toFixed(2)} km`,
-			accessibilityScore: Math.max(0, 92 - index * 7),
-		};
-	});
+const getAlternatives = async (payload: IAlternativesPayload) => {
+	const options = await buildRankedOptions(payload);
 
 	return {
 		origin: payload.origin,
 		destination: payload.destination,
-		alternatives,
+		travelMode: (payload.travelMode ?? TravelMode.WALKING) as TravelMode,
+		recommendedId: options[0]?.id ?? null,
+		alternatives: options,
 	};
 };
 
@@ -191,6 +303,38 @@ const findNearbyLocations = async (
 		.sort((a, b) => a.distanceMeters - b.distanceMeters);
 };
 
+/** Reads waypoints from a saved route, falling back to the straight line. */
+const routeWaypointsOf = (route: {
+	originLatitude: number;
+	originLongitude: number;
+	destinationLatitude: number;
+	destinationLongitude: number;
+	routeData: unknown;
+}): IEngineWaypoint[] => {
+	const data = route.routeData as { waypoints?: IEngineWaypoint[] } | null;
+	const stored = data?.waypoints;
+
+	if (Array.isArray(stored) && stored.length >= 2) {
+		return stored.map((point) => ({
+			latitude: point.latitude,
+			longitude: point.longitude,
+			name: point.name,
+		}));
+	}
+
+	return [
+		{ latitude: route.originLatitude, longitude: route.originLongitude },
+		{
+			latitude: route.destinationLatitude,
+			longitude: route.destinationLongitude,
+		},
+	];
+};
+
+/**
+ * Barriers along the saved route corridor (not just near the destination).
+ * Reports without GPS coordinates fall back to their location pin.
+ */
 const getBarriers = async (
 	userId: string,
 	role: UserRole,
@@ -198,14 +342,36 @@ const getBarriers = async (
 	radiusMeters: number,
 ) => {
 	const route = await findRoute(userId, role, routeId);
-	const center = {
-		latitude: route.destinationLatitude,
-		longitude: route.destinationLongitude,
-	};
+	const waypoints = routeWaypointsOf(route);
+	const candidates = buildRouteCandidates(
+		waypoints[0] ?? {
+			latitude: route.originLatitude,
+			longitude: route.originLongitude,
+		},
+		waypoints[waypoints.length - 1] ?? {
+			latitude: route.destinationLatitude,
+			longitude: route.destinationLongitude,
+		},
+		2,
+	);
+	const bounds = candidatesBounds(candidates, radiusMeters);
 
 	const reports = await prisma.accessibilityReport.findMany({
 		where: {
 			status: { in: [ReportStatus.PENDING, ReportStatus.UNDER_REVIEW] },
+			OR: [
+				{
+					latitude: { gte: bounds.south, lte: bounds.north },
+					longitude: { gte: bounds.west, lte: bounds.east },
+				},
+				{
+					latitude: null,
+					location: {
+						latitude: { gte: bounds.south, lte: bounds.north },
+						longitude: { gte: bounds.west, lte: bounds.east },
+					},
+				},
+			],
 		},
 		include: {
 			attachments: true,
@@ -223,22 +389,27 @@ const getBarriers = async (
 		take: 500,
 	});
 
+	const points = waypoints;
 	const barriers = reports
-		.map((report) => ({
-			...report,
-			distanceMeters: roundMeters(
-				haversineMeters(center, {
-					latitude: report.location.latitude,
-					longitude: report.location.longitude,
-				}),
-			),
-		}))
+		.map((report) => {
+			const coordinates = {
+				latitude: report.latitude ?? report.location.latitude,
+				longitude: report.longitude ?? report.location.longitude,
+			};
+
+			// Distance to the nearest waypoint of the saved route.
+			const distanceMeters = Math.round(
+				Math.min(...points.map((point) => distanceBetween(point, coordinates))),
+			);
+
+			return { ...report, coordinates, distanceMeters };
+		})
 		.filter((report) => report.distanceMeters <= radiusMeters)
 		.sort((a, b) => a.distanceMeters - b.distanceMeters);
 
 	return {
 		routeId,
-		center,
+		center: waypoints[waypoints.length - 1],
 		radiusMeters,
 		total: barriers.length,
 		barriers,

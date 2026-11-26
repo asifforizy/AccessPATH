@@ -13,6 +13,7 @@ export const accessibilityFeatureKeys = [
 	"accessibleRestroom",
 	"accessibleParking",
 	"stepFreeEntrance",
+	"doorAccessibility",
 	"tactilePaving",
 	"brailleSignage",
 	"hearingLoop",
@@ -38,6 +39,7 @@ export interface IAccessibilitySource {
 	accessibleRestroom?: boolean | null;
 	accessibleParking?: boolean | null;
 	stepFreeEntrance?: boolean | null;
+	doorAccessibility?: boolean | null;
 	tactilePaving?: boolean | null;
 	brailleSignage?: boolean | null;
 	hearingLoop?: boolean | null;
@@ -60,6 +62,7 @@ export const featureFlags = (
 		accessibleRestroom: profile.accessibleRestroom === true,
 		accessibleParking: profile.accessibleParking === true,
 		stepFreeEntrance: profile.stepFreeEntrance === true,
+		doorAccessibility: profile.doorAccessibility === true,
 		tactilePaving: profile.tactilePaving === true,
 		brailleSignage: profile.brailleSignage === true,
 		hearingLoop: profile.hearingLoop === true,

@@ -3,7 +3,12 @@
 import { revalidatePath } from "next/cache";
 
 import { apiFetch, buildQuery } from "@/lib/api";
-import type { ActionResult, IRoutePlan } from "@/utils/types";
+import type {
+  ActionResult,
+  IPlanRouteResult,
+  IRouteOption,
+  IRoutePlan,
+} from "@/utils/types";
 
 type TravelMode = "WALKING" | "WHEELCHAIR" | "CYCLING" | "DRIVING";
 
@@ -23,7 +28,7 @@ export interface RoutePlanPayload {
 }
 
 export async function planRoute(payload: RoutePlanPayload) {
-  return apiFetch<IRoutePlan>("/routes/plan", {
+  return apiFetch<IPlanRouteResult>("/routes/plan", {
     method: "POST",
     body: JSON.stringify(payload),
   });
@@ -36,7 +41,8 @@ export async function getRouteAlternatives(
     origin: Coordinate;
     destination: Coordinate;
     travelMode: string;
-    alternatives: IRoutePlan[];
+    recommendedId: string | null;
+    alternatives: IRouteOption[];
   }>("/routes/alternatives", {
     method: "POST",
     body: JSON.stringify(payload),

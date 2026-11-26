@@ -6,6 +6,9 @@ model AccessibilityReport {
 
   status      ReportStatus @default(PENDING)
 
+  latitude    Float?
+  longitude   Float?
+
   locationId  String
   location    Location     @relation(fields: [locationId], references: [id], onDelete: Cascade)
 
@@ -20,4 +23,6 @@ model AccessibilityReport {
 
   @@index([locationId, status])
   @@index([reporterId])
+  @@index([latitude, longitude])
+  @@index([type, status])
 }

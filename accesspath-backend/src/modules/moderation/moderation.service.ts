@@ -35,6 +35,7 @@ const BOOLEAN_PROFILE_KEYS = [
 	"accessibleRestroom",
 	"accessibleParking",
 	"stepFreeEntrance",
+	"doorAccessibility",
 	"tactilePaving",
 	"brailleSignage",
 	"hearingLoop",
@@ -53,6 +54,29 @@ const LOCATION_STRING_KEYS = [
 ] as const;
 
 const isAdmin = (role: UserRole) => role === UserRoleEnum.ADMIN;
+
+/**
+ * Data-integrity guard: nobody may review their own submission, including
+ * moderators and admins. (Contributors are already blocked by role.)
+ */
+const assertNotSelfReview = (
+	reviewer: RequestUser,
+	submission: Awaited<ReturnType<typeof findSubmission>>,
+) => {
+	const ownerId =
+		submission.kind === "contribution"
+			? submission.data.submittedById
+			: submission.kind === "report"
+				? submission.data.reporterId
+				: submission.data.createdById;
+
+	if (ownerId && ownerId === reviewer.userId) {
+		throw new AppError(
+			httpStatus.FORBIDDEN,
+			"You cannot review or verify your own submission. Ask another moderator.",
+		);
+	}
+};
 
 const findSubmission = async (submissionId: string) => {
 	const contribution = await prisma.contribution.findUnique({
@@ -166,6 +190,45 @@ const applyContribution = async (
 					status: LocationStatus.APPROVED,
 				},
 			});
+
+			// Preserve the accessibility data submitted with the new location.
+			const features =
+				data.features && typeof data.features === "object"
+					? (data.features as Record<string, unknown>)
+					: null;
+
+			const profileData: Record<string, boolean> = {};
+			for (const key of BOOLEAN_PROFILE_KEYS) {
+				if (features?.[key] === true) profileData[key] = true;
+			}
+
+			if (Object.keys(profileData).length > 0) {
+				await prisma.accessibilityProfile.create({
+					data: {
+						locationId: location.id,
+						...profileData,
+						accessibilityScore:
+							typeof data.accessibilityScore === "number"
+								? Math.min(100, Math.max(0, Math.round(data.accessibilityScore)))
+								: 0,
+						additionalInformation:
+							typeof data.additionalInformation === "string"
+								? data.additionalInformation
+								: null,
+					},
+				});
+			}
+
+			if (typeof data.photoUrl === "string" && data.photoUrl.length > 0) {
+				await prisma.locationPhoto.create({
+					data: {
+						locationId: location.id,
+						url: data.photoUrl,
+						uploadedById: reviewerId,
+						isPrimary: true,
+					},
+				});
+			}
 
 			await prisma.contribution.update({
 				where: { id: contribution.id },
@@ -400,6 +463,8 @@ const approveSubmission = async (
 ) => {
 	const submission = await findSubmission(submissionId);
 
+	assertNotSelfReview(reviewer, submission);
+
 	if (submission.kind === "contribution") {
 		if (submission.data.status !== ContributionStatus.PENDING) {
 			throw new AppError(httpStatus.BAD_REQUEST, "Contribution is not pending");
@@ -448,6 +513,8 @@ const rejectSubmission = async (
 ) => {
 	const submission = await findSubmission(submissionId);
 
+	assertNotSelfReview(reviewer, submission);
+
 	if (submission.kind === "contribution") {
 		await prisma.contribution.update({
 			where: { id: submissionId },
@@ -490,6 +557,8 @@ const requestChanges = async (
 ) => {
 	const submission = await findSubmission(submissionId);
 
+	assertNotSelfReview(reviewer, submission);
+
 	if (submission.kind === "contribution") {
 		await prisma.contribution.update({
 			where: { id: submissionId },
@@ -524,6 +593,8 @@ const verifySubmission = async (
 	payload: IVerifyPayload,
 ) => {
 	const submission = await findSubmission(submissionId);
+
+	assertNotSelfReview(reviewer, submission);
 
 	if (submission.kind === "location") {
 		await prisma.accessibilityProfile.upsert({
@@ -561,6 +632,8 @@ const flagSubmission = async (
 	payload: IFlagPayload,
 ) => {
 	const submission = await findSubmission(submissionId);
+
+	assertNotSelfReview(reviewer, submission);
 
 	const log = await prisma.auditLog.create({
 		data: {

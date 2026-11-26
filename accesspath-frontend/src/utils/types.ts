@@ -281,10 +281,133 @@ export interface ILocationCard {
 }
 
 export interface ILocationDetail extends ILocationCard {
+  status: string;
+  latitude: number;
+  longitude: number;
   phone?: string | null;
   website?: string | null;
   photos: IPhoto[];
   reviews: IReview[];
   averageRating?: number | null;
   reviewCount?: number;
+}
+
+export type RouteWarningSeverity = "high" | "medium" | "low";
+
+export interface IRouteWarning {
+  code: string;
+  severity: RouteWarningSeverity;
+  message: string;
+  distanceMeters?: number;
+  barrierType?: string;
+  locationId?: string;
+}
+
+export interface IRouteScoreBreakdown {
+  distancePenalty: number;
+  barrierPenalty: number;
+  supportBonus: number;
+  modeBonus: number;
+  requirementPenalty: number;
+  dataQualityPenalty: number;
+}
+
+export interface IRouteSupport {
+  sampledLocations: number;
+  verifiedRatio: number;
+  stepFreeRatio: number;
+  barriers: Record<string, number>;
+  corridorRadiusMeters: number;
+}
+
+export interface IRouteOption {
+  id: string;
+  label: string;
+  kind: string;
+  recommended: boolean;
+  travelMode: string;
+  waypoints: Array<{ latitude: number; longitude: number; name?: string }>;
+  distanceMeters: number;
+  durationSeconds: number;
+  distanceText: string;
+  durationText: string;
+  accessibilityScore: number;
+  grade: "A" | "B" | "C" | "D" | "E";
+  detourPercent: number;
+  breakdown: IRouteScoreBreakdown;
+  warnings: IRouteWarning[];
+  support: IRouteSupport;
+}
+
+export interface IRouteOptionSummary {
+  id: string;
+  label: string;
+  kind: string;
+  recommended: boolean;
+  waypoints: Array<{ latitude: number; longitude: number; name?: string }>;
+  detourPercent: number;
+  breakdown: IRouteScoreBreakdown;
+  support: IRouteSupport;
+  distanceMeters: number;
+  durationSeconds: number;
+  distanceText: string;
+  durationText: string;
+  accessibilityScore: number;
+  grade: IRouteOption["grade"];
+  warnings: IRouteWarning[];
+}
+
+export interface IPlanRouteResult {
+  routeId: string | null;
+  origin: { latitude: number; longitude: number; name?: string };
+  destination: { latitude: number; longitude: number; name?: string };
+  travelMode: string;
+  distanceMeters: number;
+  durationSeconds: number;
+  distanceText: string;
+  durationText: string;
+  waypoints: Array<{ latitude: number; longitude: number }>;
+  accessibilityScore: number;
+  grade: IRouteOption["grade"];
+  accessibilityBreakdown: IRouteScoreBreakdown;
+  warnings: IRouteWarning[];
+  support: IRouteSupport;
+  alternatives: IRouteOptionSummary[];
+  isSaved: boolean;
+}
+
+export interface IAdminManagedUser {
+  id: string;
+  name: string;
+  email: string;
+  role: "ADMIN" | "MODERATOR" | "CONTRIBUTOR" | "USER";
+  status: "ACTIVE" | "INACTIVE" | "SUSPENDED" | "DELETED";
+  emailVerifiedAt?: string | null;
+  createdAt: string;
+  _count: { reports: number; contributions: number; reviews: number };
+}
+
+export interface IAdminCategory {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string | null;
+  icon?: string | null;
+  isActive: boolean;
+  locationCount: number;
+}
+
+export interface IAdminLocation {
+  id: string;
+  name: string;
+  slug: string;
+  address: string;
+  city: string;
+  status: string;
+  latitude: number;
+  longitude: number;
+  createdAt: string;
+  category?: { id: string; name: string; slug: string } | null;
+  accessibility?: IAccessibilityProfile | null;
+  _count: { reports: number; reviews: number };
 }

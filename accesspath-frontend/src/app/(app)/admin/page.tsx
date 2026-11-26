@@ -1,6 +1,7 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
-
 import { ActionButton } from "@/components/shared/action-button";
+
 import { PageHeader } from "@/components/shared/page-header";
 import { StatGrid } from "@/components/shared/stat-grid";
 import { Badge } from "@/components/ui/badge";
@@ -161,6 +162,44 @@ export default async function AdminPage() {
               ))}
             </tbody>
           </table>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Management</CardTitle>
+          <CardDescription>
+            Admin-only tools for accounts, categories and location data.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-3 sm:grid-cols-3">
+          <Link
+            href="/admin/users"
+            className="rounded-lg border border-border p-3 text-sm hover:bg-muted"
+          >
+            <p className="font-medium">Users</p>
+            <p className="text-xs text-muted-foreground">
+              Roles and account status
+            </p>
+          </Link>
+          <Link
+            href="/admin/categories"
+            className="rounded-lg border border-border p-3 text-sm hover:bg-muted"
+          >
+            <p className="font-medium">Categories</p>
+            <p className="text-xs text-muted-foreground">
+              Create, rename, deactivate
+            </p>
+          </Link>
+          <Link
+            href="/admin/locations"
+            className="rounded-lg border border-border p-3 text-sm hover:bg-muted"
+          >
+            <p className="font-medium">Locations</p>
+            <p className="text-xs text-muted-foreground">
+              Edit details and accessibility
+            </p>
+          </Link>
         </CardContent>
       </Card>
     </div>

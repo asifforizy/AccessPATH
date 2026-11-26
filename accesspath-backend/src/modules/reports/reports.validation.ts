@@ -1,6 +1,15 @@
 import z from "zod";
 
+const barrierTypes = [
+	"BROKEN_FOOTPATH",
+	"MISSING_RAMP",
+	"BLOCKED_SIDEWALK",
+	"BROKEN_ELEVATOR",
+	"UNSAFE_CROSSING",
+] as const;
+
 const reportTypeSchema = z.enum([
+	...barrierTypes,
 	"ACCESSIBILITY_ISSUE",
 	"INCORRECT_INFORMATION",
 	"LOCATION_CLOSED",
@@ -29,6 +38,14 @@ const CreateReportZodSchema = z.object({
 		.min(10, "Description must be at least 10 characters")
 		.max(2_000),
 	attachments: z.array(attachmentSchema).max(10).optional(),
+	latitude: z.number().min(-90).max(90).optional(),
+	longitude: z.number().min(-180).max(180).optional(),
+});
+
+const BarrierReportZodSchema = CreateReportZodSchema.extend({
+	type: z.enum(barrierTypes),
+	latitude: z.number().min(-90).max(90),
+	longitude: z.number().min(-180).max(180),
 });
 
 const UpdateReportZodSchema = z
@@ -59,6 +76,8 @@ const NearbyQueryZodSchema = z.object({
 
 export {
 	AddAttachmentsZodSchema,
+	BarrierReportZodSchema,
+	barrierTypes,
 	CreateReportZodSchema,
 	NearbyQueryZodSchema,
 	ReportListQueryZodSchema,

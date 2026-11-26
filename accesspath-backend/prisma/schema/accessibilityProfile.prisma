@@ -11,6 +11,7 @@ model AccessibilityProfile {
   accessibleRestroom    Boolean  @default(false)
   accessibleParking     Boolean  @default(false)
   stepFreeEntrance      Boolean  @default(false)
+  doorAccessibility     Boolean  @default(false)
 
   tactilePaving         Boolean  @default(false)
   brailleSignage        Boolean  @default(false)

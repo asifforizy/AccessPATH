@@ -49,6 +49,8 @@ export async function createReport(payload: {
   type: string;
   description: string;
   attachments?: Array<{ url: string; publicId?: string }>;
+  latitude?: number;
+  longitude?: number;
 }): Promise<ActionResult> {
   const res = await apiFetch("/reports", {
     method: "POST",

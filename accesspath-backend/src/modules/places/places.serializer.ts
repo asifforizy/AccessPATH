@@ -30,6 +30,7 @@ export const placeCardSelect = {
 			accessibleRestroom: true,
 			accessibleParking: true,
 			stepFreeEntrance: true,
+			doorAccessibility: true,
 			tactilePaving: true,
 			brailleSignage: true,
 			hearingLoop: true,

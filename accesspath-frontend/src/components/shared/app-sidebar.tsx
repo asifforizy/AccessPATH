@@ -15,8 +15,10 @@ import {
   Route,
   ShieldCheck,
   SlidersHorizontal,
+  Tags,
   Upload,
   User,
+  Users,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -63,7 +65,26 @@ const links: {
     icon: BarChart3,
     roles: ["ADMIN", "MODERATOR"],
   },
-  { href: "/admin", label: "Admin", icon: Activity, roles: ["ADMIN"] },
+  {
+    href: "/admin",
+    label: "Admin",
+    icon: Activity,
+    roles: ["ADMIN"],
+    exact: true,
+  },
+  { href: "/admin/users", label: "Users", icon: Users, roles: ["ADMIN"] },
+  {
+    href: "/admin/categories",
+    label: "Categories",
+    icon: Tags,
+    roles: ["ADMIN"],
+  },
+  {
+    href: "/admin/locations",
+    label: "Locations",
+    icon: MapPinned,
+    roles: ["ADMIN"],
+  },
   { href: "/profile", label: "Profile", icon: User },
 ];
 

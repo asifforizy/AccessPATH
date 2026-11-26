@@ -70,6 +70,39 @@ const markerSvg = (glyph: Glyph, palette: IMapPalette) =>
 		</g>
 	</svg>`;
 
+/**
+ * Converts any CSS colour (oklch/lab/var-resolved) into hex/rgba.
+ * MapLibre's style parser only accepts legacy colour syntax, so theme tokens
+ * declared in modern colour spaces must be normalised first — otherwise every
+ * paint property is rejected and layers silently disappear.
+ */
+const createColorNormalizer = () => {
+  if (typeof document === "undefined") return (value: string) => value;
+
+  const canvas = document.createElement("canvas");
+  canvas.width = 1;
+  canvas.height = 1;
+  const context = canvas.getContext("2d", { willReadFrequently: true });
+
+  return (value: string) => {
+    if (!context || !value) return value;
+
+    context.clearRect(0, 0, 1, 1);
+    context.fillStyle = "#000000";
+    context.fillStyle = value;
+    context.fillRect(0, 0, 1, 1);
+
+    const [red, green, blue, alpha] = context.getImageData(0, 0, 1, 1).data;
+    const hex = `#${[red, green, blue]
+      .map((channel) => channel.toString(16).padStart(2, "0"))
+      .join("")}`;
+
+    return alpha === 255
+      ? hex
+      : `rgba(${red}, ${green}, ${blue}, ${(alpha / 255).toFixed(3)})`;
+  };
+};
+
 /** Reads the live theme tokens from the document root. */
 export const readMapPalette = (): IMapPalette => {
   if (typeof window === "undefined") {
@@ -84,8 +117,12 @@ export const readMapPalette = (): IMapPalette => {
   }
 
   const styles = getComputedStyle(document.documentElement);
-  const read = (token: string, fallback: string) =>
-    styles.getPropertyValue(token).trim() || fallback;
+  const toLegacyColor = createColorNormalizer();
+  const read = (token: string, fallback: string) => {
+    const raw = styles.getPropertyValue(token).trim() || fallback;
+    const normalized = toLegacyColor(raw);
+    return /^(#|rgb|hsl)/.test(normalized) ? normalized : fallback;
+  };
 
   return {
     background: read("--background", "#ffffff"),

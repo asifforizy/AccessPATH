@@ -8,6 +8,7 @@ import type {
   Map as MapLibreMap,
 } from "maplibre-gl";
 import { useEffect, useImperativeHandle, useRef, useState } from "react";
+import { loadMapLibre } from "@/lib/maplibre";
 
 import type { IMapViewport, IUserPosition } from "@/types/map.types";
 import type { IPlaceGeoFeature } from "@/types/place.types";
@@ -151,7 +152,7 @@ export function MapView({
     const setup = async () => {
       if (!containerRef.current || mapRef.current) return;
 
-      const maplibregl = await import("maplibre-gl");
+      const maplibregl = await loadMapLibre();
       if (cancelled || !containerRef.current) return;
 
       const map = new maplibregl.Map({
@@ -164,6 +165,13 @@ export function MapView({
       });
 
       mapRef.current = map;
+
+      // Dev-only handle for inspecting the live map (used by scripts/cdp-check.mjs).
+      if (process.env.NODE_ENV !== "production") {
+        (
+          window as unknown as { __accessPathMap?: MapLibreMap }
+        ).__accessPathMap = map;
+      }
 
       map.on("load", async () => {
         if (cancelled) return;
@@ -188,7 +196,15 @@ export function MapView({
         );
 
         for (const layer of buildLayers(palette)) {
-          map.addLayer(layer);
+          try {
+            map.addLayer(layer);
+          } catch (error) {
+            console.error(
+              "[map] addLayer failed",
+              layer.id,
+              (error as Error).message,
+            );
+          }
         }
 
         for (const layerId of ["user-dot", "user-accuracy"]) {
@@ -199,7 +215,14 @@ export function MapView({
         callbacksRef.current.onViewportChange(viewportOf(map));
       });
 
-      map.on("error", () => {
+      map.on("error", (event) => {
+        if (process.env.NODE_ENV !== "production") {
+          console.error(
+            "[map] error",
+            (event as unknown as { error?: { message?: string } }).error
+              ?.message,
+          );
+        }
         if (!loadedRef.current) setStatus("error");
       });
 
