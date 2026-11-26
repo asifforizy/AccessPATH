@@ -192,16 +192,15 @@ export const emptyFeatureCollection = {
   features: [] as IPlaceGeoFeature[],
 };
 
+/**
+ * Every place is rendered as its own marker — there is no clustering and no
+ * count badge, so the map never shows an unexplained number over a pin. Markers
+ * shrink and fade at low zoom so dense areas stay readable.
+ */
 export const placesSource = (features: IPlaceGeoFeature[]) => ({
   type: "geojson" as const,
   data: { type: "FeatureCollection" as const, features },
-  cluster: true,
-  clusterRadius: 46,
-  clusterMaxZoom: 14,
-  clusterProperties: {
-    // Keep the smallest accessibility score in the cluster for the tooltip.
-    minScore: ["min", ["coalesce", ["get", "accessibilityScore"], 100]],
-  },
+  cluster: false,
 });
 
 export const userSource = (position: {
@@ -278,46 +277,6 @@ export const buildLayers = (palette: IMapPalette): LayerSpecification[] => [
     },
   },
   {
-    id: "places-clusters",
-    type: "circle",
-    source: PLACE_SOURCE_ID,
-    filter: ["has", "point_count"],
-    paint: {
-      "circle-color": palette.primary,
-      "circle-radius": [
-        "interpolate",
-        ["linear"],
-        ["get", "point_count"],
-        2,
-        14,
-        20,
-        19,
-        100,
-        26,
-        500,
-        34,
-      ],
-      "circle-stroke-width": 3,
-      "circle-stroke-color": palette.background,
-    },
-  },
-  {
-    id: "places-cluster-count",
-    type: "symbol",
-    source: PLACE_SOURCE_ID,
-    filter: ["has", "point_count"],
-    layout: {
-      "text-field": ["get", "point_count_abbreviated"],
-      "text-size": 12,
-      "text-allow-overlap": true,
-    },
-    paint: {
-      "text-color": palette.primaryForeground,
-      "text-halo-color": palette.primary,
-      "text-halo-width": 1,
-    },
-  },
-  {
     id: "place-selected",
     type: "circle",
     source: PLACE_SOURCE_ID,
@@ -333,13 +292,35 @@ export const buildLayers = (palette: IMapPalette): LayerSpecification[] => [
     id: "place-markers",
     type: "symbol",
     source: PLACE_SOURCE_ID,
-    filter: ["!", ["has", "point_count"]],
     layout: {
       "icon-image": ["concat", "place-", ["get", "categoryGroup"]],
-      "icon-size": 1,
+      "icon-size": [
+        "interpolate",
+        ["linear"],
+        ["zoom"],
+        10,
+        0.5,
+        13,
+        0.75,
+        16,
+        1,
+      ],
       "icon-allow-overlap": true,
       "icon-ignore-placement": true,
       "icon-anchor": "center",
+    },
+    paint: {
+      "icon-opacity": [
+        "interpolate",
+        ["linear"],
+        ["zoom"],
+        10,
+        0.7,
+        13,
+        0.9,
+        15,
+        1,
+      ],
     },
   },
   {
@@ -364,5 +345,3 @@ export const applySelection = (map: MapLibreMap, selectedId: string | null) => {
     selectedId ?? "__none__",
   ]);
 };
-
-export const clusterOptions = { clusterRadius: 46, clusterMaxZoom: 14 };

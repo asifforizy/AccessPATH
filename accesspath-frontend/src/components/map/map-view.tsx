@@ -230,27 +230,6 @@ export function MapView({
         callbacksRef.current.onViewportChange(viewportOf(map));
       });
 
-      map.on("click", "places-clusters", async (event: MapLayerMouseEvent) => {
-        const feature = event.features?.[0];
-        const clusterId = feature?.properties?.cluster_id;
-
-        if (typeof clusterId !== "number") return;
-
-        const source = map.getSource(PLACE_SOURCE_ID) as
-          | GeoJSONSource
-          | undefined;
-        if (!source?.getClusterExpansionZoom) return;
-
-        const zoom = await source.getClusterExpansionZoom(clusterId);
-        const coordinates = (feature?.geometry as GeoJSON.Point).coordinates;
-
-        map.easeTo({
-          center: [coordinates[0] ?? 0, coordinates[1] ?? 0],
-          zoom,
-          duration: 600,
-        });
-      });
-
       map.on("click", "place-markers", (event: MapLayerMouseEvent) => {
         const placeId = event.features?.[0]?.properties?.id;
         if (typeof placeId === "string") {
@@ -260,12 +239,12 @@ export function MapView({
 
       map.on("click", (event: MapLayerMouseEvent) => {
         const hit = map.queryRenderedFeatures(event.point, {
-          layers: ["place-markers", "places-clusters"],
+          layers: ["place-markers"],
         });
         if (hit.length === 0) callbacksRef.current.onSelect(null);
       });
 
-      for (const layerId of ["places-clusters", "place-markers"]) {
+      for (const layerId of ["place-markers"]) {
         map.on("mouseenter", layerId, () => {
           map.getCanvas().style.cursor = "pointer";
         });
