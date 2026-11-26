@@ -59,10 +59,11 @@ const navItems = [
     label: "Explore",
     href: "/explore",
     icon: Compass,
+    exact: true,
   },
   {
     label: "Map",
-    href: "/map",
+    href: "/explore/map",
     icon: Map,
   },
   {
@@ -77,7 +78,7 @@ const navItems = [
   },
   {
     label: "About",
-    href: "/about",
+    href: "/#about",
     icon: User,
   },
 ];
@@ -97,10 +98,18 @@ export function Navbar({ user }: NavbarProps) {
           ? "/contributor/dashboard"
           : "/dashboard";
 
-  const isActive = (href: string) =>
-    href === "/"
-      ? pathname === "/"
-      : pathname === href || pathname.startsWith(`${href}/`);
+  const isActive = (item: { href: string; exact?: boolean }) => {
+    const { href, exact } = item;
+
+    // In-page anchors never own a route-level active state.
+    if (href.includes("#")) return false;
+
+    if (href === "/") return pathname === "/";
+
+    if (exact) return pathname === href;
+
+    return pathname === href || pathname.startsWith(`${href}/`);
+  };
 
   const handleLogout = async () => {
     if (isLoggingOut) return;
@@ -161,7 +170,7 @@ export function Navbar({ user }: NavbarProps) {
 
                 <div className="mt-6 flex flex-col gap-1 px-1">
                   {navItems.map((item) => {
-                    const active = isActive(item.href);
+                    const active = isActive(item);
                     const Icon = item.icon;
 
                     return (
@@ -250,7 +259,7 @@ export function Navbar({ user }: NavbarProps) {
           {/* CENTER: Desktop navigation */}
           <div className="hidden flex-1 items-center justify-center gap-6 lg:flex">
             {navItems.map((item) => {
-              const active = isActive(item.href);
+              const active = isActive(item);
 
               return (
                 <Link

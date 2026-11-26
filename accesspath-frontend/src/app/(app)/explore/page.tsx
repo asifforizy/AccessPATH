@@ -1,10 +1,11 @@
-import { MapPin, Star } from "lucide-react";
+import { MapPin, MapPinned, Star } from "lucide-react";
 import Link from "next/link";
 
 import { EmptyState } from "@/components/shared/empty-state";
 import { PageHeader } from "@/components/shared/page-header";
 import { Pager } from "@/components/shared/pager";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { getLocations } from "@/services/locations";
@@ -35,6 +36,14 @@ export default async function ExplorePage({
         description="Browse verified accessible places, check their accessibility features, and save the ones you like."
       >
         <Badge variant="secondary">{meta?.total ?? 0} places</Badge>
+        <Button
+          size="sm"
+          nativeButton={false}
+          render={<Link href="/explore/map" />}
+        >
+          <MapPinned aria-hidden="true" className="size-3.5" />
+          Open map explorer
+        </Button>
       </PageHeader>
 
       <form method="get" className="flex flex-wrap items-center gap-2">

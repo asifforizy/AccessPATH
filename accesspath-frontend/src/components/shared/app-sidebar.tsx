@@ -10,6 +10,7 @@ import {
   LayoutDashboard,
   type LucideIcon,
   MapPin,
+  MapPinned,
   MessageSquare,
   Route,
   ShieldCheck,
@@ -31,13 +32,17 @@ const links: {
   label: string;
   icon: LucideIcon;
   roles?: string[];
+  /** Only highlight on an exact path (for parents with nested pages). */
+  exact?: boolean;
 }[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   {
     href: "/explore",
     label: "Explore",
     icon: Compass,
+    exact: true,
   },
+  { href: "/explore/map", label: "Map explorer", icon: MapPinned },
   { href: "/routes", label: "Route Planner", icon: Route },
   { href: "/reports", label: "Reports", icon: FileWarning },
   { href: "/contribute", label: "Contribute", icon: MapPin },
@@ -69,8 +74,10 @@ export function AppSidebar({ role }: AppSidebarProps) {
     (link) => !link.roles || link.roles.includes(role),
   );
 
-  const isActive = (href: string) =>
-    pathname === href || pathname.startsWith(`${href}/`);
+  const isActive = (link: { href: string; exact?: boolean }) =>
+    link.exact
+      ? pathname === link.href
+      : pathname === link.href || pathname.startsWith(`${link.href}/`);
 
   return (
     <>
@@ -89,7 +96,7 @@ export function AppSidebar({ role }: AppSidebarProps) {
                 href={link.href}
                 className={cn(
                   "flex items-center gap-2.5 rounded-md px-3 py-2 text-sm transition-colors",
-                  isActive(link.href)
+                  isActive(link)
                     ? "bg-primary/10 font-semibold text-primary"
                     : "text-muted-foreground hover:bg-muted hover:text-foreground",
                 )}
@@ -113,7 +120,7 @@ export function AppSidebar({ role }: AppSidebarProps) {
                 href={link.href}
                 className={cn(
                   "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs whitespace-nowrap",
-                  isActive(link.href)
+                  isActive(link)
                     ? "bg-primary/10 font-semibold text-primary"
                     : "text-muted-foreground hover:bg-muted",
                 )}
