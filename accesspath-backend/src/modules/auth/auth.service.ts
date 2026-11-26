@@ -1,18 +1,17 @@
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
-import path from "path";
 import ejs from "ejs";
+import { OAuth2Client, type TokenPayload } from "google-auth-library";
 import httpStatus from "http-status";
 import type { JwtPayload, SignOptions } from "jsonwebtoken";
-import { OAuth2Client, type TokenPayload } from "google-auth-library";
-
+import path from "path";
+import { UserRole, UserStatus } from "../../../prisma/generated/prisma/enums";
+import config from "../../config";
+import { transporter } from "../../lib/nodemailer";
 import { prisma } from "../../lib/prisma";
 import { redisClient } from "../../lib/redis";
-import { transporter } from "../../lib/nodemailer";
 import { AppError } from "../../utils/AppError";
 import { jwtUtils } from "../../utils/jwt"; // <-- adjust to wherever your jwtUtils lives
-import config from "../../config";
-
 import type {
 	IForgotPasswordPayload,
 	IGoogleLoginPayload,
@@ -22,7 +21,6 @@ import type {
 	IResetPasswordPayload,
 	IVerifyEmailPayload,
 } from "./auth.interface";
-import { UserRole, UserStatus } from "../../../prisma/generated/prisma/enums";
 
 const googleClient = new OAuth2Client(config.google_client_id);
 

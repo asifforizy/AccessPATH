@@ -1,10 +1,10 @@
 import type { Request, Response } from "express";
 import httpStatus from "http-status";
+import { AppError } from "../../utils/AppError";
 import { catchAsync } from "../../utils/catchAsync";
 import { sendResponse } from "../../utils/sendResponse";
-import { AppError } from "../../utils/AppError";
-import { AuthService } from "./auth.service";
 import type { IRequestUser } from "./auth.interface";
+import { AuthService } from "./auth.service";
 
 const cookieBase = {
 	httpOnly: true,
