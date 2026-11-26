@@ -36,6 +36,7 @@ import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
@@ -381,43 +382,34 @@ export function Navbar({ user }: NavbarProps) {
           {/* RIGHT: Workspace + Theme + Authentication */}
           <div className="flex flex-1 items-center justify-end gap-2">
             {user && (
-              <DropdownMenu>
-                <DropdownMenuTrigger className="hidden h-9 items-center gap-1.5 rounded-lg border border-border bg-background px-3 text-sm font-medium transition-colors hover:bg-muted sm:inline-flex">
-                  <LayoutGrid className="size-4" />
-                  Workspace
-                  <ChevronDown className="size-3.5 text-muted-foreground" />
-                </DropdownMenuTrigger>
-
-                <DropdownMenuContent align="end" className="w-64">
-                  <DropdownMenuLabel>Workspace</DropdownMenuLabel>
-
-                  <DropdownMenuItem
-                    render={<Link href={dashboardHref} />}
-                    className="flex cursor-pointer items-center gap-2"
+              <div className="hidden sm:block">
+                <DropdownMenu>
+                  <DropdownMenuTrigger
+                    render={
+                      <button
+                        type="button"
+                        className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border bg-background px-3 text-sm font-medium transition-colors hover:bg-muted"
+                      />
+                    }
                   >
-                    <LayoutDashboard className="size-4" />
-                    Dashboard
-                  </DropdownMenuItem>
+                    <LayoutGrid className="size-4" />
+                    Workspace
+                    <ChevronDown className="size-3.5 text-muted-foreground" />
+                  </DropdownMenuTrigger>
 
-                  {visibleWorkspace.map((item) => {
-                    const Icon = item.icon;
-                    return (
+                  <DropdownMenuContent align="end" className="w-64">
+                    <DropdownMenuGroup>
+                      <DropdownMenuLabel>Workspace</DropdownMenuLabel>
+
                       <DropdownMenuItem
-                        key={item.href}
-                        render={<Link href={item.href} />}
+                        render={<Link href={dashboardHref} />}
                         className="flex cursor-pointer items-center gap-2"
                       >
-                        <Icon className="size-4" />
-                        {item.label}
+                        <LayoutDashboard className="size-4" />
+                        Dashboard
                       </DropdownMenuItem>
-                    );
-                  })}
 
-                  {visibleAdmin.length > 0 && (
-                    <>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuLabel>Administration</DropdownMenuLabel>
-                      {visibleAdmin.map((item) => {
+                      {visibleWorkspace.map((item) => {
                         const Icon = item.icon;
                         return (
                           <DropdownMenuItem
@@ -430,10 +422,32 @@ export function Navbar({ user }: NavbarProps) {
                           </DropdownMenuItem>
                         );
                       })}
-                    </>
-                  )}
-                </DropdownMenuContent>
-              </DropdownMenu>
+                    </DropdownMenuGroup>
+
+                    {visibleAdmin.length > 0 && (
+                      <>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuGroup>
+                          <DropdownMenuLabel>Administration</DropdownMenuLabel>
+                          {visibleAdmin.map((item) => {
+                            const Icon = item.icon;
+                            return (
+                              <DropdownMenuItem
+                                key={item.href}
+                                render={<Link href={item.href} />}
+                                className="flex cursor-pointer items-center gap-2"
+                              >
+                                <Icon className="size-4" />
+                                {item.label}
+                              </DropdownMenuItem>
+                            );
+                          })}
+                        </DropdownMenuGroup>
+                      </>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
             )}
 
             <ModeToggle />
