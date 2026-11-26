@@ -3,7 +3,6 @@ import { Inter } from "next/font/google";
 import { type ReactNode, Suspense } from "react";
 import "./globals.css";
 import { Toaster } from "sonner";
-import { Footer } from "@/components/shared/footer";
 import { ThemeProvider } from "@/components/shared/theme-provider";
 import { AuthUser } from "@/provider/auth-user";
 import { GoogleProvider } from "@/provider/google-provider";
@@ -35,8 +34,6 @@ const RootLayout = ({
             </Suspense>
 
             {children}
-
-            <Footer />
 
             <Toaster position="top-right" />
           </GoogleProvider>

@@ -20,6 +20,7 @@ import { ModerationRoutes } from "./modules/moderation/moderation.route";
 import { NotificationRoutes } from "./modules/notifications/notifications.route";
 import { PlaceRoutes } from "./modules/places/places.route";
 import { PreferenceRoutes } from "./modules/preferences/preferences.route";
+import { PublicRoutes } from "./modules/public/public.route";
 import { ReportRoutes } from "./modules/reports/reports.route";
 import { RouteRoutes } from "./modules/routes/routes.route";
 import { UploadRoutes } from "./modules/uploads/uploads.route";
@@ -52,6 +53,7 @@ app.use("/api/v1/uploads", UploadRoutes);
 app.use("/api/v1/analytics", AnalyticsRoutes);
 app.use("/api/v1/notifications", NotificationRoutes);
 app.use("/api/v1/preferences", PreferenceRoutes);
+app.use("/api/v1/public", PublicRoutes);
 app.use("/api/v1/admin", AdminRoutes);
 
 app.get("/", async (req: Request, res: Response) => {

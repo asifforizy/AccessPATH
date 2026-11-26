@@ -2,12 +2,27 @@
 
 import {
   Accessibility,
+  Activity,
+  BarChart3,
+  Bell,
+  Bookmark,
+  ChevronDown,
   Compass,
+  FileWarning,
   LayoutDashboard,
+  LayoutGrid,
   LogOut,
-  Map,
+  type LucideIcon,
+  Map as MapIcon,
+  MapPin,
+  MapPinned,
   Menu,
+  MessageSquare,
   Route,
+  ShieldCheck,
+  SlidersHorizontal,
+  Tags,
+  Upload,
   User,
   Users,
 } from "lucide-react";
@@ -15,12 +30,14 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
+
 import Logo from "@/assets/logo";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -32,7 +49,9 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import { cn } from "@/lib/utils";
 import { logout } from "@/services/logout";
+
 import { ModeToggle } from "./mode-toggle";
 
 type UserRole = "ADMIN" | "MODERATOR" | "CONTRIBUTOR" | "USER";
@@ -49,39 +68,57 @@ interface NavbarProps {
   user: NavbarUser | null;
 }
 
-const navItems = [
+interface NavLink {
+  href: string;
+  label: string;
+  icon: LucideIcon;
+  roles?: UserRole[];
+  exact?: boolean;
+}
+
+const primaryLinks: NavLink[] = [
+  { href: "/", label: "Home", icon: Accessibility, exact: true },
+  { href: "/explore", label: "Explore", icon: Compass, exact: true },
+  { href: "/explore/map", label: "Map", icon: MapIcon },
+  { href: "/routes", label: "Routes", icon: Route },
+  { href: "/contribute", label: "Contribute", icon: MapPin },
+  { href: "/#about", label: "About", icon: User },
+];
+
+const workspaceLinks: NavLink[] = [
+  { href: "/reports", label: "Reports", icon: FileWarning },
+  { href: "/favorites", label: "Favorites", icon: Bookmark },
+  { href: "/feedback", label: "Feedback", icon: MessageSquare },
+  { href: "/uploads", label: "Uploads", icon: Upload },
+  { href: "/notifications", label: "Notifications", icon: Bell },
+  { href: "/preferences", label: "Preferences", icon: SlidersHorizontal },
   {
-    label: "Home",
-    href: "/",
-    icon: Accessibility,
+    href: "/moderation",
+    label: "Moderation",
+    icon: ShieldCheck,
+    roles: ["ADMIN", "MODERATOR"],
   },
   {
-    label: "Explore",
-    href: "/explore",
-    icon: Compass,
-    exact: true,
-  },
-  {
-    label: "Map",
-    href: "/explore/map",
-    icon: Map,
-  },
-  {
-    label: "Route Planner",
-    href: "/routes",
-    icon: Route,
-  },
-  {
-    label: "Contribute",
-    href: "/contribute",
-    icon: Users,
-  },
-  {
-    label: "About",
-    href: "/#about",
-    icon: User,
+    href: "/analytics",
+    label: "Analytics",
+    icon: BarChart3,
+    roles: ["ADMIN", "MODERATOR"],
   },
 ];
+
+const adminLinks: NavLink[] = [
+  { href: "/admin", label: "Admin overview", icon: Activity, exact: true },
+  { href: "/admin/users", label: "Users", icon: Users },
+  { href: "/admin/categories", label: "Categories", icon: Tags },
+  { href: "/admin/locations", label: "Locations", icon: MapPinned },
+];
+
+function getDashboardHref(role?: UserRole) {
+  if (role === "ADMIN") return "/admin/dashboard";
+  if (role === "MODERATOR") return "/moderator/dashboard";
+  if (role === "CONTRIBUTOR") return "/contributor/dashboard";
+  return "/dashboard";
+}
 
 export function Navbar({ user }: NavbarProps) {
   const pathname = usePathname();
@@ -89,23 +126,19 @@ export function Navbar({ user }: NavbarProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
-  const dashboardHref =
-    user?.role === "ADMIN"
-      ? "/admin/dashboard"
-      : user?.role === "MODERATOR"
-        ? "/moderator/dashboard"
-        : user?.role === "CONTRIBUTOR"
-          ? "/contributor/dashboard"
-          : "/dashboard";
+  const dashboardHref = getDashboardHref(user?.role);
+
+  const canSee = (link: NavLink) =>
+    !link.roles || (user ? link.roles.includes(user.role) : false);
+
+  const visibleWorkspace = workspaceLinks.filter(canSee);
+  const visibleAdmin = user?.role === "ADMIN" ? adminLinks : [];
 
   const isActive = (item: { href: string; exact?: boolean }) => {
     const { href, exact } = item;
 
-    // In-page anchors never own a route-level active state.
     if (href.includes("#")) return false;
-
     if (href === "/") return pathname === "/";
-
     if (exact) return pathname === href;
 
     return pathname === href || pathname.startsWith(`${href}/`);
@@ -116,19 +149,13 @@ export function Navbar({ user }: NavbarProps) {
 
     try {
       setIsLoggingOut(true);
-
       await logout();
-
       toast.success("Logged out successfully!");
-
       setMobileOpen(false);
-
       window.location.replace("/login");
     } catch (error) {
       console.error("Logout failed:", error);
-
       toast.error("Failed to logout. Please try again.");
-
       setIsLoggingOut(false);
     }
   };
@@ -144,7 +171,7 @@ export function Navbar({ user }: NavbarProps) {
                 render={
                   <button
                     type="button"
-                    className="flex size-9 items-center justify-center rounded-md hover:bg-muted md:hidden"
+                    className="flex size-9 items-center justify-center rounded-md hover:bg-muted lg:hidden"
                     aria-label="Open navigation menu"
                   />
                 }
@@ -152,8 +179,8 @@ export function Navbar({ user }: NavbarProps) {
                 <Menu className="size-5" />
               </SheetTrigger>
 
-              <SheetContent side="left" className="w-72">
-                <SheetHeader>
+              <SheetContent side="left" className="w-80 gap-0">
+                <SheetHeader className="border-b">
                   <SheetTitle>
                     <Link
                       href="/"
@@ -168,77 +195,151 @@ export function Navbar({ user }: NavbarProps) {
                   </SheetTitle>
                 </SheetHeader>
 
-                <div className="mt-6 flex flex-col gap-1 px-1">
-                  {navItems.map((item) => {
-                    const active = isActive(item);
-                    const Icon = item.icon;
+                <div className="flex-1 overflow-y-auto p-3">
+                  <p className="px-3 pb-2 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+                    Navigation
+                  </p>
+                  <div className="flex flex-col gap-0.5">
+                    {primaryLinks.map((item) => {
+                      const Icon = item.icon;
+                      return (
+                        <SheetClose
+                          key={item.href}
+                          render={<Link href={item.href} />}
+                          className={cn(
+                            "flex items-center gap-3 rounded-md px-3 py-2.5 text-sm transition-colors",
+                            isActive(item)
+                              ? "bg-primary/10 font-semibold text-primary"
+                              : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                          )}
+                        >
+                          <Icon className="size-4" />
+                          {item.label}
+                        </SheetClose>
+                      );
+                    })}
+                  </div>
 
-                    return (
-                      <SheetClose
-                        key={item.href}
-                        render={<Link href={item.href} />}
-                        className={`flex items-center gap-3 rounded-md px-3 py-2.5 text-sm transition-colors ${
-                          active
-                            ? "bg-primary/10 font-semibold text-primary"
-                            : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                        }`}
-                      >
-                        <Icon className="size-4" />
-                        {item.label}
-                      </SheetClose>
-                    );
-                  })}
+                  {user && (
+                    <>
+                      <div className="my-3 h-px bg-border" />
+                      <p className="px-3 pb-2 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+                        Workspace
+                      </p>
+                      <div className="flex flex-col gap-0.5">
+                        <SheetClose
+                          render={<Link href={dashboardHref} />}
+                          className="flex items-center gap-3 rounded-md px-3 py-2.5 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                        >
+                          <LayoutDashboard className="size-4" />
+                          Dashboard
+                        </SheetClose>
+
+                        {visibleWorkspace.map((item) => {
+                          const Icon = item.icon;
+                          return (
+                            <SheetClose
+                              key={item.href}
+                              render={<Link href={item.href} />}
+                              className={cn(
+                                "flex items-center gap-3 rounded-md px-3 py-2.5 text-sm transition-colors",
+                                isActive(item)
+                                  ? "bg-primary/10 font-semibold text-primary"
+                                  : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                              )}
+                            >
+                              <Icon className="size-4" />
+                              {item.label}
+                            </SheetClose>
+                          );
+                        })}
+                      </div>
+                    </>
+                  )}
+
+                  {visibleAdmin.length > 0 && (
+                    <>
+                      <div className="my-3 h-px bg-border" />
+                      <p className="px-3 pb-2 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+                        Administration
+                      </p>
+                      <div className="flex flex-col gap-0.5">
+                        {visibleAdmin.map((item) => {
+                          const Icon = item.icon;
+                          return (
+                            <SheetClose
+                              key={item.href}
+                              render={<Link href={item.href} />}
+                              className={cn(
+                                "flex items-center gap-3 rounded-md px-3 py-2.5 text-sm transition-colors",
+                                isActive(item)
+                                  ? "bg-primary/10 font-semibold text-primary"
+                                  : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                              )}
+                            >
+                              <Icon className="size-4" />
+                              {item.label}
+                            </SheetClose>
+                          );
+                        })}
+                      </div>
+                    </>
+                  )}
                 </div>
 
-                <div className="my-4 h-px bg-border" />
+                <div className="border-t p-3">
+                  {user ? (
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-3 px-2">
+                        <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
+                          {user.name.charAt(0).toUpperCase()}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-semibold">
+                            {user.name}
+                          </p>
+                          <p className="truncate text-xs text-muted-foreground">
+                            {user.email}
+                          </p>
+                        </div>
+                      </div>
 
-                {user ? (
-                  <div className="flex flex-col gap-1 px-1">
-                    <div className="px-3 py-2">
-                      <p className="text-sm font-semibold">{user.name}</p>
-                      <p className="truncate text-xs text-muted-foreground">
-                        {user.email}
-                      </p>
-                      <p className="mt-1 text-xs font-medium text-primary">
-                        {user.role}
-                      </p>
+                      <SheetClose
+                        render={<Link href="/profile" />}
+                        className="flex items-center gap-3 rounded-md px-3 py-2.5 text-sm text-muted-foreground hover:bg-muted hover:text-foreground"
+                      >
+                        <User className="size-4" />
+                        Profile
+                      </SheetClose>
+
+                      <button
+                        type="button"
+                        onClick={handleLogout}
+                        disabled={isLoggingOut}
+                        className="flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-left text-sm text-red-600 hover:bg-red-50 disabled:opacity-50 dark:hover:bg-red-950/40"
+                      >
+                        <LogOut className="size-4" />
+                        {isLoggingOut ? "Logging out..." : "Logout"}
+                      </button>
                     </div>
+                  ) : (
+                    <div className="flex flex-col gap-2">
+                      <SheetClose
+                        render={<Link href="/login" />}
+                        className="flex items-center justify-center rounded-md border px-3 py-2 text-sm font-medium"
+                      >
+                        Login
+                      </SheetClose>
 
-                    <SheetClose
-                      render={<Link href={dashboardHref} />}
-                      className="flex items-center gap-3 rounded-md px-3 py-2.5 text-sm hover:bg-muted"
-                    >
-                      <LayoutDashboard className="size-4" />
-                      Dashboard
-                    </SheetClose>
-
-                    <button
-                      type="button"
-                      onClick={handleLogout}
-                      disabled={isLoggingOut}
-                      className="flex items-center gap-3 rounded-md px-3 py-2.5 text-left text-sm text-red-600 hover:bg-red-50 disabled:opacity-50 dark:hover:bg-red-950/40"
-                    >
-                      <LogOut className="size-4" />
-                      {isLoggingOut ? "Logging out..." : "Logout"}
-                    </button>
-                  </div>
-                ) : (
-                  <div className="flex flex-col gap-2 px-1">
-                    <SheetClose
-                      render={<Link href="/login" />}
-                      className="flex items-center justify-center rounded-md border px-3 py-2 text-sm font-medium"
-                    >
-                      Login
-                    </SheetClose>
-
-                    <SheetClose
-                      render={<Link href="/register" />}
-                      className="flex items-center justify-center rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground"
-                    >
-                      Get Started
-                    </SheetClose>
-                  </div>
-                )}
+                      <SheetClose
+                        render={<Link href="/register" />}
+                        className="flex items-center justify-center rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground"
+                      >
+                        Get Started
+                      </SheetClose>
+                    </div>
+                  )}
+                </div>
               </SheetContent>
             </Sheet>
 
@@ -249,7 +350,6 @@ export function Navbar({ user }: NavbarProps) {
               className="flex items-center gap-2 text-xl font-bold tracking-tight"
             >
               <Logo size={26} title="" />
-
               <span>
                 Access<span className="text-primary">Path</span>
               </span>
@@ -257,32 +357,85 @@ export function Navbar({ user }: NavbarProps) {
           </div>
 
           {/* CENTER: Desktop navigation */}
-          <div className="hidden flex-1 items-center justify-center gap-6 lg:flex">
-            {navItems.map((item) => {
+          <div className="hidden flex-1 items-center justify-center gap-1 lg:flex">
+            {primaryLinks.map((item) => {
               const active = isActive(item);
 
               return (
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`relative whitespace-nowrap py-5 text-sm font-medium transition-colors ${
+                  className={cn(
+                    "relative rounded-md px-3 py-2 text-sm font-medium whitespace-nowrap transition-colors",
                     active
-                      ? "text-primary"
-                      : "text-muted-foreground hover:text-foreground"
-                  }`}
+                      ? "bg-primary/10 text-primary"
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                  )}
                 >
                   {item.label}
-
-                  {active && (
-                    <span className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-primary" />
-                  )}
                 </Link>
               );
             })}
           </div>
 
-          {/* RIGHT: Theme + Authentication */}
-          <div className="flex flex-1 items-center justify-end gap-3">
+          {/* RIGHT: Workspace + Theme + Authentication */}
+          <div className="flex flex-1 items-center justify-end gap-2">
+            {user && (
+              <DropdownMenu>
+                <DropdownMenuTrigger className="hidden h-9 items-center gap-1.5 rounded-lg border border-border bg-background px-3 text-sm font-medium transition-colors hover:bg-muted sm:inline-flex">
+                  <LayoutGrid className="size-4" />
+                  Workspace
+                  <ChevronDown className="size-3.5 text-muted-foreground" />
+                </DropdownMenuTrigger>
+
+                <DropdownMenuContent align="end" className="w-64">
+                  <DropdownMenuLabel>Workspace</DropdownMenuLabel>
+
+                  <DropdownMenuItem
+                    render={<Link href={dashboardHref} />}
+                    className="flex cursor-pointer items-center gap-2"
+                  >
+                    <LayoutDashboard className="size-4" />
+                    Dashboard
+                  </DropdownMenuItem>
+
+                  {visibleWorkspace.map((item) => {
+                    const Icon = item.icon;
+                    return (
+                      <DropdownMenuItem
+                        key={item.href}
+                        render={<Link href={item.href} />}
+                        className="flex cursor-pointer items-center gap-2"
+                      >
+                        <Icon className="size-4" />
+                        {item.label}
+                      </DropdownMenuItem>
+                    );
+                  })}
+
+                  {visibleAdmin.length > 0 && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuLabel>Administration</DropdownMenuLabel>
+                      {visibleAdmin.map((item) => {
+                        const Icon = item.icon;
+                        return (
+                          <DropdownMenuItem
+                            key={item.href}
+                            render={<Link href={item.href} />}
+                            className="flex cursor-pointer items-center gap-2"
+                          >
+                            <Icon className="size-4" />
+                            {item.label}
+                          </DropdownMenuItem>
+                        );
+                      })}
+                    </>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+
             <ModeToggle />
 
             {user ? (
@@ -304,11 +457,9 @@ export function Navbar({ user }: NavbarProps) {
                     <p className="truncate text-sm font-semibold">
                       {user.name}
                     </p>
-
                     <p className="truncate text-xs text-muted-foreground">
                       {user.email}
                     </p>
-
                     <p className="mt-1 text-xs font-medium text-primary">
                       {user.role}
                     </p>

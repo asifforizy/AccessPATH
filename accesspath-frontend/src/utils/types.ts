@@ -280,6 +280,38 @@ export interface ILocationCard {
   _count?: { reviews: number; favorites: number; reports: number };
 }
 
+export interface IFeaturedLocation extends ILocationCard {
+  averageRating: number | null;
+  ratingCount: number;
+}
+
+export interface IPublicHomeStats {
+  places: number;
+  verifiedPlaces: number;
+  reviews: number;
+  cities: number;
+  averageAccessibilityScore: number;
+}
+
+export interface IPublicCity {
+  city: string;
+  count: number;
+}
+
+export interface IPublicCategory {
+  id: string;
+  name: string;
+  slug: string;
+  count: number;
+}
+
+export interface IPublicHome {
+  stats: IPublicHomeStats;
+  cities: IPublicCity[];
+  categories: IPublicCategory[];
+  featured: IFeaturedLocation[];
+}
+
 export interface ILocationDetail extends ILocationCard {
   status: string;
   latitude: number;

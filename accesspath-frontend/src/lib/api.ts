@@ -54,6 +54,43 @@ export const apiFetch = async <T = unknown>(
   }
 };
 
+export const publicApiFetch = async <T = unknown>(
+  path: string,
+  init?: RequestInit,
+): Promise<ApiResponse<T>> => {
+  const headers = new Headers(init?.headers);
+
+  if (!headers.has("accept")) {
+    headers.set("accept", "application/json");
+  }
+
+  try {
+    const res = await fetch(`${process.env.BACKEND_API_URL}/api/v1${path}`, {
+      ...init,
+      headers,
+      next: { revalidate: 60 },
+    });
+
+    const json = await res.json().catch(() => null);
+
+    return {
+      success: res.ok && (json?.success ?? true),
+      status: res.status,
+      message:
+        json?.message ?? (res.ok ? "Request completed" : "Request failed"),
+      data: (json?.data ?? null) as T | null,
+      meta: json?.meta,
+    };
+  } catch {
+    return {
+      success: false,
+      status: 0,
+      message: "Unable to reach the API. Please try again.",
+      data: null,
+    };
+  }
+};
+
 export const buildQuery = (
   params: Record<string, string | number | boolean | undefined | null>,
 ) => {

@@ -10,20 +10,26 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { getLocations } from "@/services/locations";
 
-type SearchParams = Promise<{ page?: string; q?: string; city?: string }>;
+type SearchParams = Promise<{
+  page?: string;
+  q?: string;
+  city?: string;
+  categoryId?: string;
+}>;
 
 export default async function ExplorePage({
   searchParams,
 }: {
   searchParams: SearchParams;
 }) {
-  const { page = "1", q = "", city = "" } = await searchParams;
+  const { page = "1", q = "", city = "", categoryId = "" } = await searchParams;
 
   const res = await getLocations({
     page: Number(page) || 1,
     limit: 12,
     q: q || undefined,
     city: city || undefined,
+    categoryId: categoryId || undefined,
   });
 
   const locations = res.data ?? [];
@@ -61,13 +67,16 @@ export default async function ExplorePage({
           className="h-9 w-40"
           aria-label="Filter by city"
         />
+        {categoryId && (
+          <input type="hidden" name="categoryId" value={categoryId} />
+        )}
         <button
           type="submit"
           className="h-9 rounded-lg border px-4 text-sm font-medium hover:bg-muted"
         >
           Search
         </button>
-        {(q || city) && (
+        {(q || city || categoryId) && (
           <Link
             href="/explore"
             className="text-sm text-muted-foreground hover:text-foreground"
@@ -155,7 +164,7 @@ export default async function ExplorePage({
         <EmptyState
           title="No locations found"
           description={
-            q || city
+            q || city || categoryId
               ? "Try a different search term or clear the filters."
               : "Approved locations will appear here once contributors add them."
           }
@@ -167,7 +176,7 @@ export default async function ExplorePage({
           page={meta.page}
           totalPages={meta.totalPages}
           basePath="/explore"
-          params={{ q, city }}
+          params={{ q, city, categoryId }}
         />
       )}
     </div>

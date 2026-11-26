@@ -1,13 +1,13 @@
-import { Accessibility, Mail, MapPin } from "lucide-react";
+import { Mail, MapPin } from "lucide-react";
 import Link from "next/link";
 import { FaFacebookF, FaGithub, FaLinkedinIn } from "react-icons/fa";
 import Logo from "@/assets/logo";
 
 const exploreLinks = [
   { label: "Explore Locations", href: "/explore" },
-  { label: "Accessibility Map", href: "/map" },
+  { label: "Accessibility Map", href: "/explore/map" },
   { label: "Route Planner", href: "/routes" },
-  { label: "Categories", href: "/categories" },
+  { label: "Contribute a Location", href: "/contribute" },
 ];
 
 const communityLinks = [
