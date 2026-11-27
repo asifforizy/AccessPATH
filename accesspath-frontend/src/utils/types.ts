@@ -27,7 +27,8 @@ export interface IRecentItem {
   createdAt: string;
   status?: string;
   type?: string;
-  description?: string;
+  title?: string | null;
+  description?: string | null;
   location?: { id: string; name: string; slug: string } | null;
 }
 

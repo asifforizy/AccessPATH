@@ -7,13 +7,11 @@ import {
   QuickLinksSkeleton,
   StatsSkeleton,
 } from "@/components/dashboard/dashboard-skeletons";
-
+import { QuickLinksSection } from "@/components/dashboard/quick-link-section";
 import { RecentReportsSection } from "@/components/dashboard/recent-reports-section";
 import { SavedPlacesSection } from "@/components/dashboard/saved-places-section";
-
-import { getUserMe } from "@/services/me";
 import { StatsSection } from "@/components/dashboard/status-section";
-import { QuickLinksSection } from "@/components/dashboard/quick-link-section";
+import { getUserMe } from "@/services/me";
 
 export default async function DashboardPage() {
   const user = await getUserMe();

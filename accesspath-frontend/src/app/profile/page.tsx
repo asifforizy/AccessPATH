@@ -1,51 +1,56 @@
 import { redirect } from "next/navigation";
+
 import { getMyReports } from "@/services/getMyReports";
 import { getMyContributions } from "@/services/getmyContributions";
 import { getUserMe } from "@/services/me";
-import { ProfileCard } from "./_components/card";
-import { EmptyState } from "./_components/emptyState";
-import { ProfileHeader } from "./_components/profileHeader";
-import { ProfileOverview } from "./_components/profileOverview";
-import { getProfileTabs } from "./_components/tabs";
+import { AccountCard } from "./_components/account-card";
+import { ActivityList } from "./_components/activity-list";
+import { ProfileHero } from "./_components/profile-hero";
+import { ProfileStats } from "./_components/profile-stats";
 
-type SearchParams = Promise<{ tab?: string }>;
-
-export default async function ProfilePage({
-  searchParams,
-}: {
-  searchParams: SearchParams;
-}) {
-  const { tab = "overview" } = await searchParams;
-
+export default async function ProfilePage() {
   const [user, contributions, reports] = await Promise.all([
     getUserMe(),
-    getMyContributions(3),
-    getMyReports(3),
+    getMyContributions(4),
+    getMyReports(4),
   ]);
 
   if (!user) redirect("/login");
 
-  const tabLabel =
-    getProfileTabs(user._count).find((t) => t.key === tab)?.label ?? "Section";
-
   return (
-    <main className="min-h-screen bg-muted">
-      <ProfileHeader user={user} activeTab={tab} />
+    <div className="space-y-5 ">
+      <ProfileHero user={user} />
 
-      <div className="mx-auto max-w-5xl px-6 py-6">
-        {tab === "overview" ? (
-          <ProfileOverview
-            user={user}
-            contributions={contributions}
-            reports={reports}
+      <ProfileStats counts={user._count} />
+
+      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-start">
+        <div className="min-w-0 space-y-6">
+          <ActivityList
+            title="Contributions"
+            href="/contribute#my-contributions"
+            items={contributions}
+            emptyText="Nothing submitted yet. Add a place or correct a detail to get started."
+            rowHref={(item) => `/contributions/${item.id}`}
+            primary={(item) =>
+              item.title ?? item.location?.name ?? "Untitled submission"
+            }
+            secondary={(item) => item.description ?? null}
           />
-        ) : (
-          <ProfileCard title={tabLabel}>
-            <EmptyState text="This section isn't built yet." />
-          </ProfileCard>
-        )}
+
+          <ActivityList
+            title="Reports"
+            href="/reports"
+            items={reports}
+            emptyText="No issue reports yet. Tell us about a blocked ramp or a broken lift."
+            rowHref={(item) => `/reports/${item.id}`}
+            primary={(item) => item.location?.name ?? "Removed place"}
+            secondary={(item) => item.description ?? null}
+          />
+        </div>
+
+        <AccountCard user={user} />
       </div>
-    </main>
+    </div>
   );
 }
 
