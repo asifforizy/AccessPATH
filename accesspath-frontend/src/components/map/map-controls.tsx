@@ -39,6 +39,8 @@ interface MapControlsProps {
   resultCount: number;
   truncated: boolean;
   label: string;
+  /** Slides the toolbar left so an open directions panel does not cover it. */
+  shiftsWithPanel?: boolean;
 }
 
 export function MapControls({
@@ -53,6 +55,7 @@ export function MapControls({
   resultCount,
   truncated,
   label,
+  shiftsWithPanel = false,
 }: MapControlsProps) {
   const locating = userStatus === "requesting";
   const hasLocation = userStatus === "granted";
@@ -98,7 +101,12 @@ export function MapControls({
       </div>
 
       {/* Map tools */}
-      <div className="absolute top-3 right-3 z-10 flex flex-col gap-1.5">
+      <div
+        className={cn(
+          "absolute top-3 z-10 flex flex-col gap-1.5 transition-[right] duration-200",
+          shiftsWithPanel ? "right-3 sm:right-[22.5rem]" : "right-3",
+        )}
+      >
         <Button
           type="button"
           size="icon"

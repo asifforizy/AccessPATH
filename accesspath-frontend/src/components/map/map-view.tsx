@@ -23,7 +23,11 @@ import {
   loadMarkerImages,
   PLACE_SOURCE_ID,
   placesSource,
+  ROUTE_ENDPOINTS_SOURCE_ID,
+  ROUTE_PATH_SOURCE_ID,
   readMapPalette,
+  routeEndpointsSource,
+  routePathSource,
   USER_SOURCE_ID,
   userSource,
 } from "./map-markers";
@@ -40,6 +44,13 @@ interface MapViewProps {
   features: IPlaceGeoFeature[];
   userPosition: IUserPosition | null;
   selectedId: string | null;
+  /** Street path from /api/route-path, drawn over the basemap. */
+  routePath?: Array<{ latitude: number; longitude: number }> | null;
+  routeOrigin?: { latitude: number; longitude: number } | null;
+  routeDestination?: { latitude: number; longitude: number } | null;
+  /** While true, the next map click returns a coordinate instead of a place. */
+  picking?: boolean;
+  onPickCoordinate?: (point: { latitude: number; longitude: number }) => void;
   initialCenter?: [number, number];
   initialZoom?: number;
   onSelect: (placeId: string | null) => void;
@@ -66,6 +77,11 @@ export function MapView({
   features,
   userPosition,
   selectedId,
+  routePath = null,
+  routeOrigin = null,
+  routeDestination = null,
+  picking = false,
+  onPickCoordinate,
   initialCenter = DEFAULT_CENTER,
   initialZoom = DEFAULT_ZOOM,
   onSelect,
@@ -81,8 +97,18 @@ export function MapView({
   );
 
   // Keep the latest callbacks without rebuilding the map.
-  const callbacksRef = useRef({ onSelect, onViewportChange });
-  callbacksRef.current = { onSelect, onViewportChange };
+  const callbacksRef = useRef({
+    onSelect,
+    onViewportChange,
+    onPickCoordinate,
+    picking,
+  });
+  callbacksRef.current = {
+    onSelect,
+    onViewportChange,
+    onPickCoordinate,
+    picking,
+  };
 
   const paletteRef = useRef(readMapPalette());
 
@@ -194,6 +220,11 @@ export function MapView({
           ACCURACY_SOURCE_ID,
           accuracySource({ latitude: 0, longitude: 0, accuracy: 25 }),
         );
+        map.addSource(ROUTE_PATH_SOURCE_ID, routePathSource(null));
+        map.addSource(
+          ROUTE_ENDPOINTS_SOURCE_ID,
+          routeEndpointsSource(null, null),
+        );
 
         for (const layer of buildLayers(palette)) {
           try {
@@ -231,6 +262,7 @@ export function MapView({
       });
 
       map.on("click", "place-markers", (event: MapLayerMouseEvent) => {
+        if (callbacksRef.current.picking) return;
         const placeId = event.features?.[0]?.properties?.id;
         if (typeof placeId === "string") {
           callbacksRef.current.onSelect(placeId);
@@ -238,6 +270,14 @@ export function MapView({
       });
 
       map.on("click", (event: MapLayerMouseEvent) => {
+        if (callbacksRef.current.picking) {
+          callbacksRef.current.onPickCoordinate?.({
+            latitude: Number(event.lngLat.lat.toFixed(6)),
+            longitude: Number(event.lngLat.lng.toFixed(6)),
+          });
+          return;
+        }
+
         const hit = map.queryRenderedFeatures(event.point, {
           layers: ["place-markers"],
         });
@@ -287,6 +327,51 @@ export function MapView({
 
     applySelection(map, selectedId);
   }, [selectedId, status]);
+
+  // Route overlay: street path + start/destination dots.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: map/resize driven
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !loadedRef.current) return;
+
+    const source = map.getSource(ROUTE_PATH_SOURCE_ID) as
+      | GeoJSONSource
+      | undefined;
+    source?.setData(routePathSource(routePath).data as never);
+
+    if (routePath && routePath.length >= 2) {
+      const lngs = routePath.map((point) => point.longitude);
+      const lats = routePath.map((point) => point.latitude);
+      const pad = 0.0012;
+
+      map.fitBounds(
+        [
+          [Math.min(...lngs) - pad, Math.min(...lats) - pad],
+          [Math.max(...lngs) + pad, Math.max(...lats) + pad],
+        ],
+        { padding: 64, maxZoom: 16, duration: 800 },
+      );
+    }
+  }, [routePath, status]);
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: map driven
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !loadedRef.current) return;
+
+    const source = map.getSource(ROUTE_ENDPOINTS_SOURCE_ID) as
+      | GeoJSONSource
+      | undefined;
+    source?.setData(
+      routeEndpointsSource(routeOrigin, routeDestination).data as never,
+    );
+  }, [routeOrigin, routeDestination, status]);
+
+  // Crosshair while picking a route origin on the map.
+  useEffect(() => {
+    const canvas = mapRef.current?.getCanvas();
+    if (canvas) canvas.style.cursor = picking ? "crosshair" : "";
+  }, [picking]);
 
   // User position: accuracy halo + dot, and center on first fix.
   useEffect(() => {

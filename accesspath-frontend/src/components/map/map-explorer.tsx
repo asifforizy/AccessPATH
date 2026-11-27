@@ -2,6 +2,10 @@
 
 import { List, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  type IExplorerRoute,
+  MapDirections,
+} from "@/components/map/map-directions";
 import type { IMapActions } from "@/components/map/map-view";
 import { MapView } from "@/components/map/map-view";
 import { Button } from "@/components/ui/button";
@@ -105,6 +109,43 @@ export function MapExplorer() {
   const [selectedPlace, setSelectedPlace] = useState<IPlaceCard | null>(null);
   const [panelOpen, setPanelOpen] = useState(false);
   const [refreshToken, setRefreshToken] = useState(0);
+  const [directionsFor, setDirectionsFor] = useState<IPlaceCard | null>(null);
+  const [pickingOrigin, setPickingOrigin] = useState(false);
+  const [pickedOrigin, setPickedOrigin] = useState<{
+    latitude: number;
+    longitude: number;
+  } | null>(null);
+  const [explorerRoute, setExplorerRoute] = useState<IExplorerRoute | null>(
+    null,
+  );
+
+  const handleRouteChange = useCallback((route: IExplorerRoute) => {
+    setExplorerRoute(route);
+  }, []);
+
+  const closeDirections = useCallback(() => {
+    setDirectionsFor(null);
+    setExplorerRoute(null);
+    setPickingOrigin(false);
+    setPickedOrigin(null);
+  }, []);
+
+  const openDirections = useCallback((place: IPlaceCard) => {
+    setDirectionsFor(place);
+    setSelectedPlace(null);
+    setSelectedId(null);
+    setPanelOpen(false);
+    setPickingOrigin(false);
+    setPickedOrigin(null);
+  }, []);
+
+  const handlePickCoordinate = useCallback(
+    (point: { latitude: number; longitude: number }) => {
+      setPickedOrigin(point);
+      setPickingOrigin(false);
+    },
+    [],
+  );
 
   const mapActions = useRef<IMapActions | null>(null);
   const fittedQuery = useRef<string | null>(null);
@@ -193,6 +234,10 @@ export function MapExplorer() {
   const selectPlace = useCallback((place: IPlaceCard | null) => {
     // A selection always shows the detail card in place of the mobile list.
     setPanelOpen(false);
+    setDirectionsFor(null);
+    setExplorerRoute(null);
+    setPickingOrigin(false);
+    setPickedOrigin(null);
 
     if (!place) {
       setSelectedId(null);
@@ -330,6 +375,11 @@ export function MapExplorer() {
             features={mapFeatures}
             userPosition={userLocation.position}
             selectedId={selectedId}
+            routePath={explorerRoute?.path ?? null}
+            routeOrigin={explorerRoute?.origin ?? null}
+            routeDestination={explorerRoute?.destination ?? null}
+            picking={pickingOrigin}
+            onPickCoordinate={handlePickCoordinate}
             onSelect={handleSelectById}
             onViewportChange={handleViewportChange}
           />
@@ -350,19 +400,38 @@ export function MapExplorer() {
             }
             truncated={!searchActive && Boolean(explore.meta?.truncated)}
             label={searchActive ? "search results" : "places in view"}
+            shiftsWithPanel={Boolean(directionsFor)}
           />
 
           {selectedPlace && (
             <LocationPopup
               place={selectedPlace}
               distanceMeters={distanceOf(selectedPlace, userLocation.position)}
-              userPosition={userLocation.position}
+              onDirections={openDirections}
               onClose={() => selectPlace(null)}
             />
           )}
 
+          {directionsFor && (
+            <MapDirections
+              destination={directionsFor}
+              userPosition={userLocation.position}
+              userStatus={userLocation.status}
+              userError={userLocation.error}
+              onRequestLocation={() => userLocation.request()}
+              picking={pickingOrigin}
+              pickedOrigin={pickedOrigin}
+              onPickOrigin={() => {
+                setPickedOrigin(null);
+                setPickingOrigin((open) => !open);
+              }}
+              onClose={closeDirections}
+              onRouteChange={handleRouteChange}
+            />
+          )}
+
           {/* Mobile: the list floats over the map so the map keeps its height. */}
-          {!selectedPlace && !panelOpen && (
+          {!selectedPlace && !directionsFor && !panelOpen && (
             <Button
               type="button"
               size="sm"
@@ -376,7 +445,7 @@ export function MapExplorer() {
             </Button>
           )}
 
-          {panelOpen && !selectedPlace && (
+          {panelOpen && !selectedPlace && !directionsFor && (
             <div className="absolute inset-0 z-30 flex flex-col justify-end lg:hidden">
               <button
                 type="button"

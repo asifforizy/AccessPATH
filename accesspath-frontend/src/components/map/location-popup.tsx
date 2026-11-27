@@ -5,10 +5,8 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
-import { Button, buttonVariants } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 import { getPlace } from "@/services/places.service";
-import type { IUserPosition } from "@/types/map.types";
 import type { IPlaceCard, IPlaceDetail } from "@/types/place.types";
 import { accessibilityFeatureKeys } from "@/types/place.types";
 
@@ -22,15 +20,10 @@ import {
 interface LocationPopupProps {
   place: IPlaceCard;
   distanceMeters?: number | null;
-  userPosition: IUserPosition | null;
   onClose: () => void;
+  /** Opens the in-map directions panel instead of leaving the site. */
+  onDirections: (place: IPlaceCard) => void;
 }
-
-const directionsUrl = (place: IPlaceCard, origin: IUserPosition | null) => {
-  const destination = `${place.latitude},${place.longitude}`;
-  const from = origin ? `${origin.latitude},${origin.longitude};` : "";
-  return `https://www.openstreetmap.org/directions?engine=fossgis_osrm_foot&route=${from}${destination}`;
-};
 
 /**
  * Location details panel. Opens from a marker or a sidebar card and fetches the
@@ -39,8 +32,8 @@ const directionsUrl = (place: IPlaceCard, origin: IUserPosition | null) => {
 export function LocationPopup({
   place,
   distanceMeters,
-  userPosition,
   onClose,
+  onDirections,
 }: LocationPopupProps) {
   const [detail, setDetail] = useState<IPlaceDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -183,15 +176,10 @@ export function LocationPopup({
           <ArrowUpRight aria-hidden="true" className="size-3.5" />
           View details
         </Button>
-        <a
-          href={directionsUrl(place, userPosition)}
-          target="_blank"
-          rel="noreferrer"
-          className={cn(buttonVariants({ size: "sm" }))}
-        >
+        <Button type="button" size="sm" onClick={() => onDirections(place)}>
           <Navigation aria-hidden="true" className="size-3.5" />
-          Get directions
-        </a>
+          Directions
+        </Button>
       </div>
     </section>
   );

@@ -18,6 +18,8 @@ import type { CategoryGroup, IPlaceGeoFeature } from "@/types/place.types";
 export const PLACE_SOURCE_ID = "places";
 export const USER_SOURCE_ID = "user-location";
 export const ACCURACY_SOURCE_ID = "user-accuracy";
+export const ROUTE_PATH_SOURCE_ID = "route-path";
+export const ROUTE_ENDPOINTS_SOURCE_ID = "route-endpoints";
 
 export const categoryGroupLabel: Record<CategoryGroup, string> = {
   BUILDING: "Public building",
@@ -187,6 +189,68 @@ export const buildMapStyle = (): StyleSpecification => {
   };
 };
 
+type LatLng = { latitude: number; longitude: number };
+
+/** Street path returned by /api/route-path, drawn over the basemap. */
+export const routePathSource = (path: LatLng[] | null) => ({
+  type: "geojson" as const,
+  data: {
+    type: "FeatureCollection" as const,
+    features:
+      path && path.length >= 2
+        ? [
+            {
+              type: "Feature" as const,
+              properties: {},
+              geometry: {
+                type: "LineString" as const,
+                coordinates: path.map(
+                  (point) =>
+                    [point.longitude, point.latitude] as [number, number],
+                ),
+              },
+            },
+          ]
+        : [],
+  },
+});
+
+/** Start (A) and destination (B) dots for an in-map directions query. */
+export const routeEndpointsSource = (
+  origin: LatLng | null,
+  destination: LatLng | null,
+) => {
+  const features = [
+    origin
+      ? {
+          type: "Feature" as const,
+          properties: { kind: "origin" },
+          geometry: {
+            type: "Point" as const,
+            coordinates: [origin.longitude, origin.latitude],
+          },
+        }
+      : null,
+    destination
+      ? {
+          type: "Feature" as const,
+          properties: { kind: "destination" },
+          geometry: {
+            type: "Point" as const,
+            coordinates: [destination.longitude, destination.latitude],
+          },
+        }
+      : null,
+  ].filter((feature) => feature !== null);
+
+  return {
+    type: "geojson" as const,
+    data: { type: "FeatureCollection" as const, features },
+  };
+};
+
+export const ROUTE_DESTINATION_COLOR = "#e11d48";
+
 export const emptyFeatureCollection = {
   type: "FeatureCollection" as const,
   features: [] as IPlaceGeoFeature[],
@@ -321,6 +385,48 @@ export const buildLayers = (palette: IMapPalette): LayerSpecification[] => [
         15,
         1,
       ],
+    },
+  },
+  {
+    id: "route-line-casing",
+    type: "line",
+    source: ROUTE_PATH_SOURCE_ID,
+    layout: { "line-cap": "round", "line-join": "round" },
+    paint: {
+      "line-color": palette.background,
+      "line-width": 9,
+      "line-opacity": 0.85,
+    },
+  },
+  {
+    id: "route-line",
+    type: "line",
+    source: ROUTE_PATH_SOURCE_ID,
+    layout: { "line-cap": "round", "line-join": "round" },
+    paint: { "line-color": palette.primary, "line-width": 4.5 },
+  },
+  {
+    id: "route-origin",
+    type: "circle",
+    source: ROUTE_ENDPOINTS_SOURCE_ID,
+    filter: ["==", ["get", "kind"], "origin"],
+    paint: {
+      "circle-radius": 8,
+      "circle-color": palette.primary,
+      "circle-stroke-width": 3,
+      "circle-stroke-color": palette.background,
+    },
+  },
+  {
+    id: "route-destination",
+    type: "circle",
+    source: ROUTE_ENDPOINTS_SOURCE_ID,
+    filter: ["==", ["get", "kind"], "destination"],
+    paint: {
+      "circle-radius": 8,
+      "circle-color": ROUTE_DESTINATION_COLOR,
+      "circle-stroke-width": 3,
+      "circle-stroke-color": palette.background,
     },
   },
   {
