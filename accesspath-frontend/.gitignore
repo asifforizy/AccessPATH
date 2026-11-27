@@ -45,3 +45,5 @@ public/vendor/
 
 # user-uploaded files
 /public/uploads/
+
+.vercel

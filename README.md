@@ -1,9 +1,5 @@
 # AccessPath – Advanced Urban Accessibility & Mobility Platform
 
-<p align="center">
-  <strong>Making cities more accessible, one journey at a time.</strong>
-</p>
-
 
 
 ## Overview
@@ -25,7 +21,7 @@ The platform combines geospatial search, interactive maps, accessibility-aware r
 
 ## Live Application
 
-**Explore AccessPath:** https://YOUR-ACCESSPATH-LIVE-URL.vercel.app
+**Explore AccessPath:** https://accesspath-frontend.vercel.app
 
 > Replace this URL with your actual deployed application URL.
 

@@ -4,9 +4,10 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "node dist/server.js",
-    "build": "tsc",
     "dev": "tsx watch src/server.ts",
+    "build": "tsup",
+    "start": "node dist/server.js",
+    "db:seed": "tsx prisma/seed.ts",
     "test": "echo \"Error: no test specified\" && exit 1",
     "format:check": "npx biome format ./src",
     "format:fix": "npx biome format --write ./src",
