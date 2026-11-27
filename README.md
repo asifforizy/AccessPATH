@@ -4,24 +4,7 @@
   <strong>Making cities more accessible, one journey at a time.</strong>
 </p>
 
-<p align="center">
-  <a href="https://YOUR-ACCESSPATH-LIVE-URL.vercel.app">
-    <img src="https://img.shields.io/badge/Live%20Demo-Visit%20AccessPath-16A34A?style=for-the-badge&logo=vercel&logoColor=white" alt="Live Demo" />
-  </a>
-  <a href="YOUR-GITHUB-REPOSITORY-URL">
-    <img src="https://img.shields.io/badge/GitHub-Source%20Code-181717?style=for-the-badge&logo=github" alt="GitHub Repository" />
-  </a>
-</p>
 
-<p align="center">
-  <img src="https://img.shields.io/badge/Next.js-App%20Router-black?logo=next.js" alt="Next.js" />
-  <img src="https://img.shields.io/badge/TypeScript-Strict-blue?logo=typescript" alt="TypeScript" />
-  <img src="https://img.shields.io/badge/Express.js-Backend-000000?logo=express" alt="Express.js" />
-  <img src="https://img.shields.io/badge/PostgreSQL-Database-4169E1?logo=postgresql" alt="PostgreSQL" />
-  <img src="https://img.shields.io/badge/Prisma-ORM-2D3748?logo=prisma" alt="Prisma" />
-</p>
-
----
 
 ## Overview
 
@@ -55,7 +38,8 @@ You can explore AccessPath using the following demo accounts.
 |---|---|---|
 | Admin | `admin@accesspath.dev` | `AccessPath#2026` |
 | Regular User | `zxcvbnm87522@gmail.com` | `Saifur1212*` |
-
+| Contributor | `contributor@accesspath.dev` | `AccessPath#2026` |
+| Moderator | `moderator@accesspath.dev` | `AccessPath#2026` |
 
 **Note:** These are demonstration credentials intended for testing the application's role-based features. Do not use these accounts for real or sensitive information.
 
