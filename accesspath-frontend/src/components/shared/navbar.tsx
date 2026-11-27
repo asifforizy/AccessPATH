@@ -9,6 +9,7 @@ import {
   ChevronDown,
   Compass,
   FileWarning,
+  Layers,
   LayoutDashboard,
   LayoutGrid,
   LogOut,
@@ -83,7 +84,7 @@ const primaryLinks: NavLink[] = [
   { href: "/explore/map", label: "Map", icon: MapIcon },
   { href: "/routes", label: "Routes", icon: Route },
   { href: "/contribute", label: "Contribute", icon: MapPin },
-  { href: "/#about", label: "About", icon: User },
+  { href: "/services", label: "Services", icon: Layers },
 ];
 
 const workspaceLinks: NavLink[] = [
