@@ -13,13 +13,31 @@ import {
   useState,
 } from "react";
 
-import { buildMapStyle, readMapPalette } from "@/components/map/map-markers";
+import {
+  buildMapStyle,
+  loadMarkerImages,
+  placesSource,
+  readMapPalette,
+} from "@/components/map/map-markers";
+import { useMapLocations } from "@/hooks/use-map-locations";
 import { loadMapLibre } from "@/lib/maplibre";
+import type { IMapViewport } from "@/types/map.types";
+import type { IPlaceFilters } from "@/types/place.types";
 import type { IRoutePoint, PickKind } from "@/types/route.types";
 
 const ROUTE_SOURCE = "route-line";
 const ROUTE_CASING_LAYER = "route-line-casing";
 const ROUTE_LAYER = "route-line";
+
+/** Same pins as /explore/map, so places are recognisable on both maps. */
+const PLACES_SOURCE = "route-places";
+const PLACES_LAYER = "route-place-markers";
+
+const NO_FILTERS: IPlaceFilters = {
+  category: null,
+  features: [],
+  verifiedOnly: false,
+};
 
 const DEFAULT_CENTER: [number, number] = [90.4125, 23.7806];
 const DEFAULT_ZOOM = 12;
@@ -44,6 +62,8 @@ interface RouteMapProps {
   picking: PickKind | null;
   userPosition: LatLng | null;
   onPick: (kind: PickKind, point: LatLng) => void;
+  /** A place pin was tapped; it becomes the endpoint being chosen. */
+  onSelectPlace: (point: IRoutePoint) => void;
   ref?: React.Ref<IRouteMapActions>;
 }
 
@@ -69,6 +89,18 @@ const lineFeature = (waypoints: LatLng[]) => ({
 
 const round = (value: number) => Number(value.toFixed(6));
 
+const viewportOf = (map: MapLibreMap): IMapViewport => {
+  const bounds = map.getBounds();
+
+  return {
+    north: bounds.getNorth(),
+    south: bounds.getSouth(),
+    east: bounds.getEast(),
+    west: bounds.getWest(),
+    zoom: map.getZoom(),
+  };
+};
+
 /**
  * Map for the route planner.
  *
@@ -83,6 +115,7 @@ export function RouteMap({
   picking,
   userPosition,
   onPick,
+  onSelectPlace,
   ref,
 }: RouteMapProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -96,8 +129,17 @@ export function RouteMap({
     "loading",
   );
 
-  const callbacksRef = useRef({ onPick, picking });
-  callbacksRef.current = { onPick, picking };
+  const [viewport, setViewport] = useState<IMapViewport | null>(null);
+
+  const callbacksRef = useRef({ onPick, picking, onSelectPlace });
+  callbacksRef.current = { onPick, picking, onSelectPlace };
+
+  // Places for the visible area — the same feed the explore map uses.
+  const places = useMapLocations({
+    viewport,
+    filters: NO_FILTERS,
+    enabled: status === "ready",
+  });
 
   const fitTo = useCallback((points: LatLng[]) => {
     const map = mapRef.current;
@@ -177,9 +219,49 @@ export function RouteMap({
         ).__accessPathRouteMap = map;
       }
 
-      map.on("load", () => {
+      map.on("load", async () => {
         if (cancelled) return;
         const palette = readMapPalette();
+
+        await loadMarkerImages(map, palette);
+        if (cancelled) return;
+
+        map.addSource(PLACES_SOURCE, placesSource([]));
+        map.addLayer({
+          id: PLACES_LAYER,
+          type: "symbol",
+          source: PLACES_SOURCE,
+          layout: {
+            "icon-image": ["concat", "place-", ["get", "categoryGroup"]],
+            "icon-size": [
+              "interpolate",
+              ["linear"],
+              ["zoom"],
+              10,
+              0.5,
+              13,
+              0.75,
+              16,
+              1,
+            ],
+            "icon-allow-overlap": true,
+            "icon-ignore-placement": true,
+            "icon-anchor": "center",
+          },
+          paint: {
+            "icon-opacity": [
+              "interpolate",
+              ["linear"],
+              ["zoom"],
+              10,
+              0.7,
+              13,
+              0.9,
+              15,
+              1,
+            ],
+          },
+        });
 
         map.addSource(ROUTE_SOURCE, {
           type: "geojson",
@@ -208,6 +290,7 @@ export function RouteMap({
 
         loadedRef.current = true;
         setStatus("ready");
+        setViewport(viewportOf(map));
       });
 
       map.on("error", () => {
@@ -215,6 +298,12 @@ export function RouteMap({
       });
 
       map.on("click", (event) => {
+        // A pin click is handled by the layer listener below.
+        const onPin = map.queryRenderedFeatures(event.point, {
+          layers: [PLACES_LAYER],
+        });
+        if (onPin.length > 0) return;
+
         const active = callbacksRef.current.picking;
         if (!active) return;
         callbacksRef.current.onPick(active, {
@@ -222,6 +311,42 @@ export function RouteMap({
           longitude: round(event.lngLat.lng),
         });
       });
+
+      // Tapping a place pin picks it as the endpoint being chosen.
+      map.on("click", PLACES_LAYER, (event) => {
+        const spot = event.features?.[0];
+        if (!spot) return;
+        const properties = spot.properties as {
+          id?: string;
+          name?: string;
+          latitude?: number;
+          longitude?: number;
+        };
+        if (
+          typeof properties.latitude !== "number" ||
+          typeof properties.longitude !== "number"
+        ) {
+          return;
+        }
+
+        callbacksRef.current.onSelectPlace({
+          id: properties.id,
+          name: properties.name ?? "Pinned place",
+          latitude: properties.latitude,
+          longitude: properties.longitude,
+        });
+      });
+
+      map.on("mouseenter", PLACES_LAYER, () => {
+        if (mapRef.current) mapRef.current.getCanvas().style.cursor = "pointer";
+      });
+      map.on("mouseleave", PLACES_LAYER, () => {
+        const canvas = mapRef.current?.getCanvas();
+        if (canvas)
+          canvas.style.cursor = callbacksRef.current.picking ? "crosshair" : "";
+      });
+
+      map.on("moveend", () => setViewport(viewportOf(map)));
 
       observer = new ResizeObserver(() => map.resize());
       observer.observe(containerRef.current);
@@ -243,6 +368,16 @@ export function RouteMap({
       loadedRef.current = false;
     };
   }, []);
+
+  // Place pins for the visible area.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: the map is created once; status marks readiness
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !loadedRef.current) return;
+
+    const source = map.getSource(PLACES_SOURCE) as GeoJSONSource | undefined;
+    source?.setData(placesSource(places.features).data as never);
+  }, [places.features, status]);
 
   // Route line: prefer the street path, fall back to the scored corridor.
   // biome-ignore lint/correctness/useExhaustiveDependencies: fitTo is stable and reads the map ref

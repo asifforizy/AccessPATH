@@ -764,6 +764,15 @@ export function RoutePlanner() {
           picking={picking}
           userPosition={userLocation.position}
           onPick={pickPoint}
+          onSelectPlace={(point) => {
+            if (picking === "origin") {
+              setOrigin(point);
+            } else {
+              setDestination(point);
+            }
+            setPicking(null);
+            mapActions.current?.focus(point);
+          }}
         />
 
         <div className="pointer-events-none absolute top-3 left-3 z-10 flex flex-col gap-1.5 text-xs">
