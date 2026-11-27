@@ -1,7 +1,20 @@
+
+## Demo Accounts
+
+You can explore AccessPath using the following demo accounts.
+
+| Role | Email | Password |
+|---|---|---|
+| Admin | `admin@accesspath.dev` | `AccessPath#2026` |
+| Regular User | `zxcvbnm87522@gmail.com` | `Saifur1212*` |
+| Contributor | `contributor@accesspath.dev` | `AccessPath#2026` |
+| Moderator | `moderator@accesspath.dev` | `AccessPath#2026` |
+
+**Note:** These are demonstration credentials intended for testing the application's role-based features. Do not use these accounts for real or sensitive information.
+
+
+
 # AccessPath – Advanced Urban Accessibility & Mobility Platform
-
-
-
 ## Overview
 
 **AccessPath** is an accessibility-focused urban mobility platform designed to help wheelchair users, elderly people, and individuals with mobility challenges discover accessible locations and navigate cities more safely.
@@ -25,19 +38,6 @@ The platform combines geospatial search, interactive maps, accessibility-aware r
 
 > Replace this URL with your actual deployed application URL.
 
-
-## Demo Accounts
-
-You can explore AccessPath using the following demo accounts.
-
-| Role | Email | Password |
-|---|---|---|
-| Admin | `admin@accesspath.dev` | `AccessPath#2026` |
-| Regular User | `zxcvbnm87522@gmail.com` | `Saifur1212*` |
-| Contributor | `contributor@accesspath.dev` | `AccessPath#2026` |
-| Moderator | `moderator@accesspath.dev` | `AccessPath#2026` |
-
-**Note:** These are demonstration credentials intended for testing the application's role-based features. Do not use these accounts for real or sensitive information.
 
 ## Key Features
 
