@@ -35,7 +35,7 @@ export function DashboardHero({ name, role }: DashboardHeroProps) {
         </div>
 
         <div className="flex flex-wrap gap-2">
-          <Link href="/reports/new" className={cn(buttonVariants())}>
+          <Link href="/reports" className={cn(buttonVariants())}>
             <FileWarning className="size-4" />
             Report an issue
           </Link>
