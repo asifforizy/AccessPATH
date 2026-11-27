@@ -5,6 +5,10 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 
+import {
+  type ISelectedPlace,
+  PlacePicker,
+} from "@/components/shared/place-picker";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -13,7 +17,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
@@ -22,7 +25,8 @@ import { createFeedback } from "@/services/feedback";
 export function FeedbackForm() {
   const router = useRouter();
 
-  const [locationId, setLocationId] = useState("");
+  const [place, setPlace] = useState<ISelectedPlace | null>(null);
+  const [placeError, setPlaceError] = useState<string | null>(null);
   const [rating, setRating] = useState("5");
   const [comment, setComment] = useState("");
   const [loading, setLoading] = useState(false);
@@ -30,10 +34,16 @@ export function FeedbackForm() {
   const onSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
+    if (!place) {
+      setPlaceError("Choose the place you visited first.");
+      toast.error("Choose a place to review");
+      return;
+    }
+
     try {
       setLoading(true);
       const res = await createFeedback({
-        locationId,
+        locationId: place.id,
         rating: Number(rating),
         comment: comment || undefined,
       });
@@ -44,8 +54,10 @@ export function FeedbackForm() {
       }
 
       toast.success(res.message);
-      setLocationId("");
+      setPlace(null);
+      setPlaceError(null);
       setComment("");
+      setRating("5");
       router.refresh();
     } catch (error) {
       toast.error(
@@ -61,19 +73,21 @@ export function FeedbackForm() {
       <CardHeader>
         <CardTitle>Share feedback</CardTitle>
         <CardDescription>
-          Rate a location&apos;s accessibility and help other visitors.
+          Search for the place by name, then rate its accessibility to help
+          other visitors.
         </CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={onSubmit} className="grid gap-3 md:grid-cols-2">
-          <div className="space-y-1.5">
-            <Label htmlFor="feedback-location">Location ID</Label>
-            <Input
-              id="feedback-location"
-              value={locationId}
-              onChange={(event) => setLocationId(event.target.value)}
-              placeholder="Location UUID"
-              required
+          <div className="md:col-span-2">
+            <PlacePicker
+              label="Which place did you visit?"
+              value={place}
+              onChange={(next) => {
+                setPlace(next);
+                if (next) setPlaceError(null);
+              }}
+              error={placeError}
             />
           </div>
 
@@ -102,11 +116,16 @@ export function FeedbackForm() {
             />
           </div>
 
-          <div className="md:col-span-2">
+          <div className="flex flex-wrap items-center gap-3 md:col-span-2">
             <Button type="submit" disabled={loading}>
               {loading && <Loader2 className="size-4 animate-spin" />}
               Submit feedback
             </Button>
+            <p className="text-xs text-muted-foreground">
+              {place
+                ? `Reviewing ${place.name}`
+                : "Pick a place above to enable submitting."}
+            </p>
           </div>
         </form>
       </CardContent>

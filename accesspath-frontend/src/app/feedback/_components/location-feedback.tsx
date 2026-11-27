@@ -1,13 +1,14 @@
 "use client";
 
-import { Loader2, Search } from "lucide-react";
-import { useState } from "react";
+import { Loader2 } from "lucide-react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
+import {
+  type ISelectedPlace,
+  PlacePicker,
+} from "@/components/shared/place-picker";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { getLocationFeedback, getLocationReviews } from "@/services/feedback";
 import type { IReview } from "@/utils/types";
 
@@ -17,68 +18,83 @@ type Summary = {
   distribution: Record<number, number>;
 };
 
+/**
+ * Ratings for one place, chosen by name — no UUID to look up.
+ */
 export function LocationFeedback() {
-  const [locationId, setLocationId] = useState("");
+  const [place, setPlace] = useState<ISelectedPlace | null>(null);
   const [loading, setLoading] = useState(false);
   const [summary, setSummary] = useState<Summary | null>(null);
   const [reviews, setReviews] = useState<IReview[]>([]);
 
-  const load = async () => {
-    try {
-      setLoading(true);
-      const [feedback, list] = await Promise.all([
-        getLocationFeedback(locationId),
-        getLocationReviews(locationId, { limit: 10 }),
-      ]);
-
-      if (!feedback.success) {
-        toast.error(feedback.message);
-        return;
-      }
-
-      setSummary(feedback.data);
-      setReviews(list.data ?? []);
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Failed to load feedback",
-      );
-    } finally {
-      setLoading(false);
+  useEffect(() => {
+    if (!place) {
+      setSummary(null);
+      setReviews([]);
+      return;
     }
-  };
+
+    const controller = { cancelled: false };
+    setLoading(true);
+
+    Promise.all([
+      getLocationFeedback(place.id),
+      getLocationReviews(place.id, { limit: 10 }),
+    ])
+      .then(([feedback, list]) => {
+        if (controller.cancelled) return;
+        if (!feedback.success) {
+          setSummary(null);
+          setReviews([]);
+          toast.error(feedback.message);
+          return;
+        }
+        setSummary(feedback.data);
+        setReviews(list.data ?? []);
+      })
+      .catch(() => {
+        if (controller.cancelled) return;
+        setSummary(null);
+        setReviews([]);
+        toast.error("Failed to load feedback");
+      })
+      .finally(() => {
+        if (!controller.cancelled) setLoading(false);
+      });
+
+    return () => {
+      controller.cancelled = true;
+    };
+  }, [place]);
 
   return (
     <div className="space-y-4 rounded-xl border bg-card p-4">
-      <div className="space-y-1.5">
-        <Label htmlFor="lookup-location">Location feedback lookup</Label>
-        <div className="flex gap-2">
-          <Input
-            id="lookup-location"
-            value={locationId}
-            onChange={(event) => setLocationId(event.target.value)}
-            placeholder="Location UUID"
-          />
-          <Button
-            type="button"
-            disabled={loading || !locationId}
-            onClick={load}
-          >
-            {loading ? (
-              <Loader2 className="size-4 animate-spin" />
-            ) : (
-              <Search className="size-4" />
-            )}
-            Lookup
-          </Button>
-        </div>
-      </div>
+      <PlacePicker
+        label="Location feedback lookup"
+        value={place}
+        onChange={setPlace}
+      />
+
+      {loading && (
+        <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <Loader2 aria-hidden="true" className="size-3.5 animate-spin" />
+          Loading ratings…
+        </p>
+      )}
+
+      {!place && !loading && (
+        <p className="text-xs text-muted-foreground">
+          Search a place by name to see how visitors rated its accessibility.
+        </p>
+      )}
 
       {summary && (
         <div className="space-y-3">
           <div className="flex flex-wrap items-center gap-3 text-sm">
+            <span className="font-medium">{place?.name}</span>
             <Badge variant="info">{summary.averageRating.toFixed(2)} / 5</Badge>
             <span className="text-muted-foreground">
-              {summary.total} review(s)
+              {summary.total} review{summary.total === 1 ? "" : "s"}
             </span>
           </div>
 
@@ -90,7 +106,11 @@ export function LocationFeedback() {
               return (
                 <div key={star} className="flex items-center gap-2 text-xs">
                   <span className="w-8">{star}★</span>
-                  <div className="h-2 flex-1 overflow-hidden rounded-full bg-muted">
+                  <div
+                    className="h-2 flex-1 overflow-hidden rounded-full bg-muted"
+                    role="img"
+                    aria-label={`${star} star: ${count} of ${summary.total}`}
+                  >
                     <div
                       className="h-full rounded-full bg-primary"
                       style={{ width: `${width}%` }}
@@ -120,7 +140,7 @@ export function LocationFeedback() {
               ))
             ) : (
               <p className="text-xs text-muted-foreground">
-                No reviews for this location.
+                No reviews for this place yet.
               </p>
             )}
           </div>

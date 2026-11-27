@@ -33,6 +33,9 @@ export function PlacePicker({
   error,
 }: PlacePickerProps) {
   const listId = useId();
+  // Labels may be numbered for the eye ("2. Which place…"); keep the spoken
+  // field name clean.
+  const searchLabel = label.replace(/^\d+\.\s*/, "");
   const [query, setQuery] = useState("");
   const debouncedQuery = useDebouncedValue(query.trim(), 300);
   const [results, setResults] = useState<IPlaceCard[]>([]);
@@ -104,7 +107,7 @@ export function PlacePicker({
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Search a location by name or address"
-              aria-label={`Search ${label.toLowerCase()}`}
+              aria-label={`Search ${searchLabel.toLowerCase()}`}
               aria-controls={listId}
               className="h-9 pl-8"
             />
