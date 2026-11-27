@@ -2,7 +2,7 @@ import { RoutePlanner } from "./_components/route-planner";
 
 export default function RoutesPage() {
   return (
-    <div className="flex flex-col gap-4 lg:h-[calc(100dvh-7.0625rem)]">
+    <div className="flex flex-col gap-4 lg:h-[calc(100dvh-7.0625rem)] lg:min-h-0 lg:overflow-hidden">
       <header className="shrink-0">
         <h1 className="text-2xl font-bold tracking-tight">Route planner</h1>
         <p className="mt-1 max-w-2xl text-sm text-muted-foreground">

@@ -158,50 +158,12 @@ export function LocationPicker({
         )}
         {status === "error" && (
           <p className="absolute inset-0 flex items-center justify-center bg-background/80 p-4 text-center text-xs">
-            Map tiles unavailable — enter coordinates manually below.
+            Map tiles unavailable — add the coordinates by hand below.
           </p>
         )}
       </div>
 
-      <div className="flex flex-wrap items-end gap-2">
-        <label htmlFor="picker-latitude" className="flex-1 text-xs">
-          <span className="mb-1 block text-muted-foreground">Latitude</span>
-          <Input
-            id="picker-latitude"
-            type="number"
-            step="0.000001"
-            min={-90}
-            max={90}
-            value={latitude ?? ""}
-            onChange={(event) =>
-              onChange({
-                latitude: Number(event.target.value),
-                longitude: longitude ?? 0,
-              })
-            }
-            required
-            className="h-8"
-          />
-        </label>
-        <label htmlFor="picker-longitude" className="flex-1 text-xs">
-          <span className="mb-1 block text-muted-foreground">Longitude</span>
-          <Input
-            id="picker-longitude"
-            type="number"
-            step="0.000001"
-            min={-180}
-            max={180}
-            value={longitude ?? ""}
-            onChange={(event) =>
-              onChange({
-                latitude: latitude ?? 0,
-                longitude: Number(event.target.value),
-              })
-            }
-            required
-            className="h-8"
-          />
-        </label>
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <Button type="button" variant="outline" size="sm" onClick={locate}>
           {locating ? (
             <Loader2 aria-hidden="true" className="size-3.5 animate-spin" />
@@ -210,7 +172,49 @@ export function LocationPicker({
           )}
           Use my location
         </Button>
+
+        <div className="flex flex-wrap items-end gap-2">
+          <label htmlFor="picker-latitude" className="flex-1">
+            <span className="mb-1 block text-muted-foreground">Latitude</span>
+            <Input
+              id="picker-latitude"
+              type="number"
+              step="0.000001"
+              min={-90}
+              max={90}
+              value={latitude ?? ""}
+              onChange={(event) =>
+                onChange({
+                  latitude: Number(event.target.value),
+                  longitude: longitude ?? 0,
+                })
+              }
+              required
+              className="h-8"
+            />
+          </label>
+          <label htmlFor="picker-longitude" className="flex-1">
+            <span className="mb-1 block text-muted-foreground">Longitude</span>
+            <Input
+              id="picker-longitude"
+              type="number"
+              step="0.000001"
+              min={-180}
+              max={180}
+              value={longitude ?? ""}
+              onChange={(event) =>
+                onChange({
+                  latitude: latitude ?? 0,
+                  longitude: Number(event.target.value),
+                })
+              }
+              required
+              className="h-8"
+            />
+          </label>
+        </div>
       </div>
+
       <p className="text-xs text-muted-foreground">
         Click the map or drag the pin to set the exact position.
       </p>

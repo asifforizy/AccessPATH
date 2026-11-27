@@ -99,6 +99,7 @@ export function RoutePlanner() {
   const [comment, setComment] = useState("");
 
   const mapActions = useRef<IRouteMapActions | null>(null);
+  const resultsRef = useRef<HTMLDivElement | null>(null);
   const userLocation = useUserLocation();
 
   const selected = useMemo(
@@ -269,6 +270,15 @@ export function RoutePlanner() {
       if (ranked.length === 0) {
         setError("No route options were found between these places.");
       } else {
+        // The rail scrolls as one column, so bring the options into view.
+        window.setTimeout(
+          () =>
+            resultsRef.current?.scrollIntoView({
+              behavior: "smooth",
+              block: "start",
+            }),
+          120,
+        );
         toast.success(
           `Compared ${ranked.length} accessible route${ranked.length === 1 ? "" : "s"}`,
         );
@@ -378,173 +388,373 @@ export function RoutePlanner() {
   const canPlan = Boolean(origin && destination);
 
   return (
-    <div className="flex min-w-0 flex-col gap-3 lg:grid lg:h-full lg:min-h-0 lg:grid-cols-[23.5rem_minmax(0,1fr)] lg:grid-rows-[auto_minmax(0,1fr)]">
-      {/* ── Planner form ───────────────────────────────────────────────── */}
-      <Card className="min-w-0 shrink-0 lg:col-start-1 lg:row-start-1">
-        <CardContent className="space-y-3">
-          <div className="space-y-2">
-            <RouteEndpointPicker
-              label="From"
-              accent="origin"
-              placeholder="Search a starting place"
-              point={origin}
-              onSelect={(point) => {
-                setOrigin(point);
-                setPicking(null);
-                mapActions.current?.focus(point);
-              }}
-              onClear={() => setOrigin(null)}
-              onUseMyLocation={useMyLocation}
-              locating={
-                awaitingMyLocation || userLocation.status === "requesting"
-              }
-              onTogglePick={() => togglePick("origin")}
-              picking={picking === "origin"}
-            />
+    <div className="flex min-w-0 flex-col gap-3 lg:grid lg:h-full lg:min-h-0 lg:grid-cols-[23.5rem_minmax(0,1fr)] lg:grid-rows-[minmax(0,1fr)]">
+      {/*
+       * One rail, one scroll: the form and the results live in a single column
+       * that scrolls together, so nothing is pinned below the fold.
+       */}
+      <div className="relative flex min-h-0 min-w-0 flex-col gap-3 lg:overflow-y-auto lg:pr-1">
+        {/* ── Planner form ─────────────────────────────────────────────── */}
+        <Card className="min-w-0 shrink-0">
+          <CardContent className="space-y-3">
+            <div className="space-y-2">
+              <RouteEndpointPicker
+                label="From"
+                accent="origin"
+                placeholder="Search a starting place"
+                point={origin}
+                onSelect={(point) => {
+                  setOrigin(point);
+                  setPicking(null);
+                  mapActions.current?.focus(point);
+                }}
+                onClear={() => setOrigin(null)}
+                onUseMyLocation={useMyLocation}
+                locating={
+                  awaitingMyLocation || userLocation.status === "requesting"
+                }
+                onTogglePick={() => togglePick("origin")}
+                picking={picking === "origin"}
+              />
 
-            <div className="flex justify-center">
+              <div className="flex justify-center">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-xs"
+                  onClick={swap}
+                  disabled={!origin && !destination}
+                  aria-label="Swap start and destination"
+                  title="Swap start and destination"
+                >
+                  <ArrowUpDown aria-hidden="true" />
+                </Button>
+              </div>
+
+              <RouteEndpointPicker
+                label="To"
+                accent="destination"
+                placeholder="Search a destination"
+                point={destination}
+                onSelect={(point) => {
+                  setDestination(point);
+                  setPicking(null);
+                  mapActions.current?.focus(point);
+                }}
+                onClear={() => setDestination(null)}
+                onTogglePick={() => togglePick("destination")}
+                picking={picking === "destination"}
+              />
+            </div>
+
+            {userLocation.error && (
+              <p className="flex items-start gap-1.5 text-xs text-muted-foreground">
+                <AlertTriangle
+                  aria-hidden="true"
+                  className="mt-0.5 size-3.5 shrink-0"
+                />
+                {userLocation.error}
+              </p>
+            )}
+
+            <fieldset className="space-y-1.5">
+              <legend className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+                Travel mode
+              </legend>
+              <div className="grid grid-cols-2 gap-1.5">
+                {travelModes.map((mode) => {
+                  const Icon = mode.icon;
+                  const active = travelMode === mode.value;
+                  return (
+                    <Button
+                      key={mode.value}
+                      type="button"
+                      size="sm"
+                      variant={active ? "secondary" : "outline"}
+                      aria-pressed={active}
+                      onClick={() => setTravelMode(mode.value)}
+                      className={cn(
+                        "justify-start gap-1.5",
+                        active && "ring-1 ring-primary/40",
+                      )}
+                    >
+                      <Icon aria-hidden="true" />
+                      {mode.label}
+                    </Button>
+                  );
+                })}
+              </div>
+            </fieldset>
+
+            <fieldset className="space-y-1.5">
+              <legend className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+                Needs
+              </legend>
+              <div className="flex flex-wrap gap-1.5">
+                {requirementFields.map((field) => {
+                  const active = Boolean(requirements[field.key]);
+                  return (
+                    <Button
+                      key={field.key}
+                      type="button"
+                      variant={active ? "secondary" : "ghost"}
+                      size="xs"
+                      aria-pressed={active}
+                      onClick={() =>
+                        setRequirements((previous) => ({
+                          ...previous,
+                          [field.key]: !previous[field.key],
+                        }))
+                      }
+                      className={cn(
+                        "rounded-full border",
+                        active ? "border-primary/40" : "border-border",
+                      )}
+                    >
+                      {field.label}
+                    </Button>
+                  );
+                })}
+              </div>
+            </fieldset>
+
+            {error && (
+              <p
+                role="alert"
+                className="rounded-md border border-destructive/30 bg-destructive/10 px-2.5 py-1.5 text-xs text-destructive"
+              >
+                {error}
+              </p>
+            )}
+
+            <div className="flex items-center justify-between gap-2 border-t border-border pt-3">
+              <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <input
+                  type="checkbox"
+                  checked={save}
+                  onChange={(event) => setSave(event.target.checked)}
+                  className="size-3.5 rounded border accent-primary"
+                />
+                Save route
+              </label>
+
               <Button
                 type="button"
-                variant="ghost"
-                size="icon-xs"
-                onClick={swap}
-                disabled={!origin && !destination}
-                aria-label="Swap start and destination"
-                title="Swap start and destination"
+                size="sm"
+                onClick={findRoutes}
+                disabled={planning || !canPlan}
+                title={
+                  canPlan ? undefined : "Choose a start and a destination first"
+                }
               >
-                <ArrowUpDown aria-hidden="true" />
+                {planning ? (
+                  <Loader2 aria-hidden="true" className="animate-spin" />
+                ) : (
+                  <RouteIcon aria-hidden="true" />
+                )}
+                Find accessible routes
               </Button>
             </div>
+          </CardContent>
+        </Card>
 
-            <RouteEndpointPicker
-              label="To"
-              accent="destination"
-              placeholder="Search a destination"
-              point={destination}
-              onSelect={(point) => {
-                setDestination(point);
-                setPicking(null);
-                mapActions.current?.focus(point);
-              }}
-              onClear={() => setDestination(null)}
-              onTogglePick={() => togglePick("destination")}
-              picking={picking === "destination"}
-            />
-          </div>
-
-          {userLocation.error && (
-            <p className="flex items-start gap-1.5 text-xs text-muted-foreground">
-              <AlertTriangle
-                aria-hidden="true"
-                className="mt-0.5 size-3.5 shrink-0"
-              />
-              {userLocation.error}
+        {/* ── Results ────────────────────────────────────────────────────── */}
+        <div
+          ref={resultsRef}
+          className="relative min-w-0 space-y-2 scroll-mt-2"
+        >
+          {stale && (
+            <p className="rounded-md border border-amber-500/30 bg-amber-500/10 px-2.5 py-1.5 text-xs text-amber-700 dark:text-amber-400">
+              Start, destination, mode or needs changed — run the comparison
+              again.
             </p>
           )}
 
-          <fieldset className="space-y-1.5">
-            <legend className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-              Travel mode
-            </legend>
-            <div className="grid grid-cols-2 gap-1.5">
-              {travelModes.map((mode) => {
-                const Icon = mode.icon;
-                const active = travelMode === mode.value;
-                return (
-                  <Button
-                    key={mode.value}
-                    type="button"
-                    size="sm"
-                    variant={active ? "secondary" : "outline"}
-                    aria-pressed={active}
-                    onClick={() => setTravelMode(mode.value)}
-                    className={cn(
-                      "justify-start gap-1.5",
-                      active && "ring-1 ring-primary/40",
-                    )}
-                  >
-                    <Icon aria-hidden="true" />
-                    {mode.label}
-                  </Button>
-                );
-              })}
-            </div>
-          </fieldset>
+          {planning && (
+            <Card>
+              <CardContent className="flex items-center gap-2 py-1 text-sm text-muted-foreground">
+                <Loader2
+                  aria-hidden="true"
+                  className="size-4 shrink-0 animate-spin"
+                />
+                Scoring accessibility and barriers along the corridor — long
+                routes can take a few seconds.
+              </CardContent>
+            </Card>
+          )}
 
-          <fieldset className="space-y-1.5">
-            <legend className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-              Needs
-            </legend>
-            <div className="flex flex-wrap gap-1.5">
-              {requirementFields.map((field) => {
-                const active = Boolean(requirements[field.key]);
-                return (
+          {!planning && options.length === 0 ? (
+            <Card>
+              <CardContent className="space-y-2 py-1">
+                <p className="flex items-center gap-1.5 text-sm font-medium">
+                  <Info aria-hidden="true" className="size-4 text-primary" />
+                  No route planned yet
+                </p>
+                <ol className="list-decimal space-y-1 pl-4 text-xs text-muted-foreground">
+                  <li>
+                    Type a place name, or tap “My location” for the start.
+                  </li>
+                  <li>
+                    Set where you are going the same way, or pin it on the map.
+                  </li>
+                  <li>
+                    Pick a travel mode and your needs, then run the comparison.
+                  </li>
+                </ol>
+                <p className="text-xs text-muted-foreground">
+                  Every option is scored from verified accessibility data and
+                  live barrier reports along the corridor — not distance alone.
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <>
+              <div className="flex items-baseline justify-between gap-2 px-0.5">
+                <h2 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+                  {options.length} route option
+                  {options.length === 1 ? "" : "s"}
+                </h2>
+                <span className="text-[11px] text-muted-foreground">
+                  {selected
+                    ? `Showing ${selected.distanceText} · ${selected.durationText}`
+                    : null}
+                </span>
+              </div>
+
+              {options.map((option, index) => (
+                <RouteOptionCard
+                  key={option.id}
+                  option={option}
+                  index={index}
+                  selected={option.id === selected?.id}
+                  onSelect={() => setSelectedId(option.id)}
+                />
+              ))}
+            </>
+          )}
+
+          {plan?.routeId && options.length > 0 && (
+            <details className="rounded-xl border border-border bg-card">
+              <summary className="cursor-pointer px-3 py-2 text-xs font-medium text-muted-foreground">
+                Route tools · saved route
+              </summary>
+              <div className="space-y-2 border-t border-border p-3">
+                <div className="flex flex-wrap gap-1.5">
                   <Button
-                    key={field.key}
                     type="button"
-                    variant={active ? "secondary" : "ghost"}
+                    variant="outline"
                     size="xs"
-                    aria-pressed={active}
-                    onClick={() =>
-                      setRequirements((previous) => ({
-                        ...previous,
-                        [field.key]: !previous[field.key],
-                      }))
-                    }
-                    className={cn(
-                      "rounded-full border",
-                      active ? "border-primary/40" : "border-border",
-                    )}
+                    disabled={toolLoading !== null}
+                    onClick={() => runTool("barriers")}
                   >
-                    {field.label}
+                    {toolLoading === "barriers" && (
+                      <Loader2 aria-hidden="true" className="animate-spin" />
+                    )}
+                    Barriers
                   </Button>
-                );
-              })}
-            </div>
-          </fieldset>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="xs"
+                    disabled={toolLoading !== null}
+                    onClick={() => runTool("accessibility")}
+                  >
+                    {toolLoading === "accessibility" && (
+                      <Loader2 aria-hidden="true" className="animate-spin" />
+                    )}
+                    Accessibility
+                  </Button>
+                  <Input
+                    value={radius}
+                    onChange={(event) => setRadius(event.target.value)}
+                    type="number"
+                    min={100}
+                    aria-label="Corridor radius in meters"
+                    className="h-6 w-24"
+                  />
+                </div>
 
-          {error && (
-            <p
-              role="alert"
-              className="rounded-md border border-destructive/30 bg-destructive/10 px-2.5 py-1.5 text-xs text-destructive"
-            >
-              {error}
-            </p>
+                {toolResult && (
+                  <output className="block rounded-md border border-border p-2 text-xs">
+                    {toolResult}
+                  </output>
+                )}
+
+                <div className="grid gap-1.5 sm:grid-cols-[4rem_1fr_auto]">
+                  <Input
+                    value={rating}
+                    onChange={(event) => setRating(event.target.value)}
+                    type="number"
+                    min={1}
+                    max={5}
+                    aria-label="Route rating"
+                    className="h-7"
+                  />
+                  <Input
+                    value={comment}
+                    onChange={(event) => setComment(event.target.value)}
+                    placeholder="How was this route?"
+                    aria-label="Route feedback comment"
+                    className="h-7"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="xs"
+                    onClick={sendFeedback}
+                  >
+                    Send
+                  </Button>
+                </div>
+              </div>
+            </details>
           )}
 
-          <div className="flex items-center justify-between gap-2 border-t border-border pt-3">
-            <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <input
-                type="checkbox"
-                checked={save}
-                onChange={(event) => setSave(event.target.checked)}
-                className="size-3.5 rounded border accent-primary"
-              />
-              Save route
-            </label>
-
-            <Button
-              type="button"
-              size="sm"
-              onClick={findRoutes}
-              disabled={planning || !canPlan}
-              title={
-                canPlan ? undefined : "Choose a start and a destination first"
-              }
-            >
-              {planning ? (
-                <Loader2 aria-hidden="true" className="animate-spin" />
-              ) : (
-                <RouteIcon aria-hidden="true" />
-              )}
-              Find accessible routes
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+          {canPlan && (
+            <details className="rounded-xl border border-border bg-card">
+              <summary className="cursor-pointer px-3 py-2 text-xs font-medium text-muted-foreground">
+                Diagnostics
+              </summary>
+              <div className="space-y-2 border-t border-border p-3">
+                <div className="flex flex-wrap gap-1.5">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="xs"
+                    disabled={toolLoading !== null}
+                    onClick={() => runTool("validate")}
+                  >
+                    {toolLoading === "validate" && (
+                      <Loader2 aria-hidden="true" className="animate-spin" />
+                    )}
+                    Validate route
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="xs"
+                    disabled={toolLoading !== null}
+                    onClick={() => runTool("score")}
+                  >
+                    {toolLoading === "score" && (
+                      <Loader2 aria-hidden="true" className="animate-spin" />
+                    )}
+                    Area accessibility
+                  </Button>
+                </div>
+                {toolResult && (
+                  <output className="block rounded-md border border-border p-2 text-xs">
+                    {toolResult}
+                  </output>
+                )}
+              </div>
+            </details>
+          )}
+        </div>
+      </div>
 
       {/* ── Map ────────────────────────────────────────────────────────── */}
-      <div className="relative h-72 min-w-0 overflow-hidden rounded-xl border border-border bg-muted sm:h-80 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:h-auto">
+      <div className="relative h-72 min-w-0 overflow-hidden rounded-xl border border-border bg-muted sm:h-80 lg:h-full">
         <RouteMap
           ref={mapActions}
           origin={origin}
@@ -612,195 +822,6 @@ export function RoutePlanner() {
           >
             <Maximize2 aria-hidden="true" />
           </Button>
-        )}
-      </div>
-
-      {/* ── Results ────────────────────────────────────────────────────── */}
-      <div className="relative min-w-0 space-y-2 lg:col-start-1 lg:row-start-2 lg:min-h-0 lg:overflow-y-auto lg:pr-0.5">
-        {stale && (
-          <p className="rounded-md border border-amber-500/30 bg-amber-500/10 px-2.5 py-1.5 text-xs text-amber-700 dark:text-amber-400">
-            Start, destination, mode or needs changed — run the comparison
-            again.
-          </p>
-        )}
-
-        {planning && (
-          <Card>
-            <CardContent className="flex items-center gap-2 py-1 text-sm text-muted-foreground">
-              <Loader2
-                aria-hidden="true"
-                className="size-4 shrink-0 animate-spin"
-              />
-              Scoring accessibility and barriers along the corridor — long
-              routes can take a few seconds.
-            </CardContent>
-          </Card>
-        )}
-
-        {!planning && options.length === 0 ? (
-          <Card>
-            <CardContent className="space-y-2 py-1">
-              <p className="flex items-center gap-1.5 text-sm font-medium">
-                <Info aria-hidden="true" className="size-4 text-primary" />
-                No route planned yet
-              </p>
-              <ol className="list-decimal space-y-1 pl-4 text-xs text-muted-foreground">
-                <li>Type a place name, or tap “My location” for the start.</li>
-                <li>
-                  Set where you are going the same way, or pin it on the map.
-                </li>
-                <li>
-                  Pick a travel mode and your needs, then run the comparison.
-                </li>
-              </ol>
-              <p className="text-xs text-muted-foreground">
-                Every option is scored from verified accessibility data and live
-                barrier reports along the corridor — not distance alone.
-              </p>
-            </CardContent>
-          </Card>
-        ) : (
-          <>
-            <div className="flex items-baseline justify-between gap-2 px-0.5">
-              <h2 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-                {options.length} route option
-                {options.length === 1 ? "" : "s"}
-              </h2>
-              <span className="text-[11px] text-muted-foreground">
-                {selected
-                  ? `Showing ${selected.distanceText} · ${selected.durationText}`
-                  : null}
-              </span>
-            </div>
-
-            {options.map((option, index) => (
-              <RouteOptionCard
-                key={option.id}
-                option={option}
-                index={index}
-                selected={option.id === selected?.id}
-                onSelect={() => setSelectedId(option.id)}
-              />
-            ))}
-          </>
-        )}
-
-        {plan?.routeId && options.length > 0 && (
-          <details className="rounded-xl border border-border bg-card">
-            <summary className="cursor-pointer px-3 py-2 text-xs font-medium text-muted-foreground">
-              Route tools · saved route
-            </summary>
-            <div className="space-y-2 border-t border-border p-3">
-              <div className="flex flex-wrap gap-1.5">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="xs"
-                  disabled={toolLoading !== null}
-                  onClick={() => runTool("barriers")}
-                >
-                  {toolLoading === "barriers" && (
-                    <Loader2 aria-hidden="true" className="animate-spin" />
-                  )}
-                  Barriers
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="xs"
-                  disabled={toolLoading !== null}
-                  onClick={() => runTool("accessibility")}
-                >
-                  {toolLoading === "accessibility" && (
-                    <Loader2 aria-hidden="true" className="animate-spin" />
-                  )}
-                  Accessibility
-                </Button>
-                <Input
-                  value={radius}
-                  onChange={(event) => setRadius(event.target.value)}
-                  type="number"
-                  min={100}
-                  aria-label="Corridor radius in meters"
-                  className="h-6 w-24"
-                />
-              </div>
-
-              {toolResult && (
-                <output className="block rounded-md border border-border p-2 text-xs">
-                  {toolResult}
-                </output>
-              )}
-
-              <div className="grid gap-1.5 sm:grid-cols-[4rem_1fr_auto]">
-                <Input
-                  value={rating}
-                  onChange={(event) => setRating(event.target.value)}
-                  type="number"
-                  min={1}
-                  max={5}
-                  aria-label="Route rating"
-                  className="h-7"
-                />
-                <Input
-                  value={comment}
-                  onChange={(event) => setComment(event.target.value)}
-                  placeholder="How was this route?"
-                  aria-label="Route feedback comment"
-                  className="h-7"
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="xs"
-                  onClick={sendFeedback}
-                >
-                  Send
-                </Button>
-              </div>
-            </div>
-          </details>
-        )}
-
-        {canPlan && (
-          <details className="rounded-xl border border-border bg-card">
-            <summary className="cursor-pointer px-3 py-2 text-xs font-medium text-muted-foreground">
-              Diagnostics
-            </summary>
-            <div className="space-y-2 border-t border-border p-3">
-              <div className="flex flex-wrap gap-1.5">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="xs"
-                  disabled={toolLoading !== null}
-                  onClick={() => runTool("validate")}
-                >
-                  {toolLoading === "validate" && (
-                    <Loader2 aria-hidden="true" className="animate-spin" />
-                  )}
-                  Validate route
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="xs"
-                  disabled={toolLoading !== null}
-                  onClick={() => runTool("score")}
-                >
-                  {toolLoading === "score" && (
-                    <Loader2 aria-hidden="true" className="animate-spin" />
-                  )}
-                  Area accessibility
-                </Button>
-              </div>
-              {toolResult && (
-                <output className="block rounded-md border border-border p-2 text-xs">
-                  {toolResult}
-                </output>
-              )}
-            </div>
-          </details>
         )}
       </div>
     </div>
