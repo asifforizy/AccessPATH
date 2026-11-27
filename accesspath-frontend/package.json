@@ -6,8 +6,10 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "biome check",
-    "format": "biome format --write",
+    "format:check": "npx biome format ./src",
+    "format:fix": "npx biome format --write ./src",
+    "lint:check": "npx biome lint ./src",
+    "lint:fix": "npx biome lint --write ./src",
     "copy:maplibre": "node scripts/copy-maplibre.mjs",
     "predev": "npm run copy:maplibre",
     "prebuild": "npm run copy:maplibre"

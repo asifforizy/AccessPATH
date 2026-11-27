@@ -384,8 +384,6 @@ export default function ServicesPage() {
         </div>
       </section>
 
-
-
       {/* CTA */}
       <section
         aria-labelledby="cta-heading"

@@ -35,7 +35,7 @@ const RootLayout = ({
             </Suspense>
 
             {children}
-            <Footer/>
+            <Footer />
             <Toaster position="top-right" />
           </GoogleProvider>
         </ThemeProvider>

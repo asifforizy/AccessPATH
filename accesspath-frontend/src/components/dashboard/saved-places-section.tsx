@@ -1,4 +1,3 @@
-
 import { getFavorites } from "@/services/favorites";
 import { SavedPlacesCard } from "./saved-place-card";
 

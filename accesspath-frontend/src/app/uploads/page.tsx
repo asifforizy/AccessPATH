@@ -28,8 +28,6 @@ export default async function UploadsPage() {
         <UploadPhotoPanel canUpload={canUpload} />
         <PlacePhotos />
       </div>
-
-      
     </div>
   );
 }

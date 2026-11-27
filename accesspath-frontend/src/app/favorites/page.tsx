@@ -1,4 +1,3 @@
-
 import { FavoriteCard } from "@/components/favorites/favorites-card";
 import { FavoritesEmpty } from "@/components/favorites/favorites-empty";
 import { FavoritesHeader } from "@/components/favorites/favorites-header";

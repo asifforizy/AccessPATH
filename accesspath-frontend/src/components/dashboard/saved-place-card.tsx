@@ -12,7 +12,9 @@ import {
 } from "@/components/ui/card";
 import type { getFavorites } from "@/services/favorites";
 
-type Favorite = NonNullable<Awaited<ReturnType<typeof getFavorites>>["data"]>[number];
+type Favorite = NonNullable<
+  Awaited<ReturnType<typeof getFavorites>>["data"]
+>[number];
 
 export function SavedPlacesCard({ favorites }: { favorites: Favorite[] }) {
   return (
@@ -40,7 +42,9 @@ export function SavedPlacesCard({ favorites }: { favorites: Favorite[] }) {
                 </p>
               </div>
               {favorite.location?.category && (
-                <Badge variant="outline">{favorite.location.category.name}</Badge>
+                <Badge variant="outline">
+                  {favorite.location.category.name}
+                </Badge>
               )}
             </div>
           ))

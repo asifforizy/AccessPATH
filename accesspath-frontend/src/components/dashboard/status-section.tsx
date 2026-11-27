@@ -23,7 +23,11 @@ export async function StatsSection({ counts }: StatsSectionProps) {
           hint: "Total submitted",
         },
         { label: "Reviews", value: counts.reviews, hint: "Feedback written" },
-        { label: "Favorites", value: counts.favorites, hint: "Saved locations" },
+        {
+          label: "Favorites",
+          value: counts.favorites,
+          hint: "Saved locations",
+        },
       ]}
     />
   );

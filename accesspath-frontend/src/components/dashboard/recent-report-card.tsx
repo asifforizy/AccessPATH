@@ -13,7 +13,9 @@ import {
 import { timeAgo } from "@/lib/format";
 import type { getMyReports } from "@/services/reports";
 
-type Report = NonNullable<Awaited<ReturnType<typeof getMyReports>>["data"]>[number];
+type Report = NonNullable<
+  Awaited<ReturnType<typeof getMyReports>>["data"]
+>[number];
 
 export function RecentReportsCard({ reports }: { reports: Report[] }) {
   return (

@@ -1,12 +1,7 @@
 import { Bell, ChevronRight, MapPin, MessageSquare } from "lucide-react";
 import Link from "next/link";
 
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getUnreadCount } from "@/services/notifications";
 
 export async function QuickLinksSection() {
@@ -18,7 +13,9 @@ export async function QuickLinksSection() {
       href: "/notifications",
       icon: Bell,
       title: "Notifications",
-      description: unreadCount ? `${unreadCount} unread` : "You're all caught up",
+      description: unreadCount
+        ? `${unreadCount} unread`
+        : "You're all caught up",
       highlight: unreadCount > 0,
     },
     {

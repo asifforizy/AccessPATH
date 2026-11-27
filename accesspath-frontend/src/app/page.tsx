@@ -513,8 +513,6 @@ const HomePage = async () => {
           </div>
         </div>
       </section>
-
-
     </main>
   );
 };
