@@ -13,6 +13,7 @@ import {
   Route as RouteIcon,
   X,
 } from "lucide-react";
+import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
@@ -23,6 +24,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { useUserLocation } from "@/hooks/use-user-location";
 import { cn } from "@/lib/utils";
+import { getPlace } from "@/services/places.service";
 import {
   getRouteAccessibility,
   getRouteBarriers,
@@ -98,6 +100,9 @@ export function RoutePlanner() {
   const [rating, setRating] = useState("5");
   const [comment, setComment] = useState("");
 
+  const searchParams = useSearchParams();
+  const destinationId = searchParams.get("destinationId");
+
   const mapActions = useRef<IRouteMapActions | null>(null);
   const resultsRef = useRef<HTMLDivElement | null>(null);
   const userLocation = useUserLocation();
@@ -168,6 +173,44 @@ export function RoutePlanner() {
       controller.abort();
     };
   }, [origin, destination, travelMode]);
+
+  // Arriving from a place page ("Get directions") preloads the destination and
+  // keeps everything inside the app — no tab switch to an outside map.
+  useEffect(() => {
+    if (!destinationId) return;
+
+    const controller = new AbortController();
+
+    getPlace(destinationId, controller.signal)
+      .then((response) => {
+        if (controller.signal.aborted) return;
+        const place = response.data;
+        if (!response.success || !place) {
+          toast.error("That place could not be loaded. Search for it instead.");
+          return;
+        }
+
+        const point: IRoutePoint = {
+          id: place.id,
+          name: place.name,
+          latitude: place.latitude,
+          longitude: place.longitude,
+        };
+
+        setDestination(point);
+        mapActions.current?.focus(point);
+        toast.success(`Destination: ${place.name}`, {
+          description: "Now choose where you are starting from.",
+        });
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) {
+          toast.error("That place could not be loaded. Search for it instead.");
+        }
+      });
+
+    return () => controller.abort();
+  }, [destinationId]);
 
   // "My location" resolves asynchronously; fill the field when it arrives.
   useEffect(() => {

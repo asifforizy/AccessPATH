@@ -1,4 +1,11 @@
-import { ImageOff, MapPin, MapPinned, Star } from "lucide-react";
+import {
+  Bookmark,
+  ImageOff,
+  MapPin,
+  MapPinned,
+  MessageSquare,
+  Star,
+} from "lucide-react";
 import Link from "next/link";
 
 import { EmptyState } from "@/components/shared/empty-state";
@@ -91,6 +98,8 @@ export default async function ExplorePage({
           {locations.map((location) => {
             const accessibility = location.accessibility;
             const photo = location.photos?.[0];
+            const reviewCount = location._count?.reviews ?? 0;
+            const savedCount = location._count?.favorites ?? 0;
 
             return (
               <Link
@@ -184,9 +193,22 @@ export default async function ExplorePage({
                         )}
                       </div>
 
-                      <p className="text-xs text-muted-foreground">
-                        {location._count?.reviews ?? 0} review(s) ·{" "}
-                        {location._count?.favorites ?? 0} saved
+                      <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                        <span className="inline-flex items-center gap-1">
+                          <MessageSquare
+                            aria-hidden="true"
+                            className="size-3 shrink-0"
+                          />
+                          {reviewCount}{" "}
+                          {reviewCount === 1 ? "review" : "reviews"}
+                        </span>
+                        <span className="inline-flex items-center gap-1">
+                          <Bookmark
+                            aria-hidden="true"
+                            className="size-3 shrink-0"
+                          />
+                          {savedCount} saved
+                        </span>
                       </p>
                     </div>
                   </CardContent>

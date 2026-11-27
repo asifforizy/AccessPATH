@@ -4,7 +4,6 @@ import Link from "next/link";
 import { CategoryIcon, categoryGroupFromText } from "@/components/map/map-meta";
 import { ActionButton } from "@/components/shared/action-button";
 import { buttonVariants } from "@/components/ui/button";
-import { osmDirectionsUrl } from "@/lib/geo";
 import { cn } from "@/lib/utils";
 import type { ActionResult, ILocationDetail } from "@/utils/types";
 
@@ -40,7 +39,6 @@ export function LocationHero({
     location.category?.name ?? "",
     location.category?.slug ?? "",
   );
-  const directions = osmDirectionsUrl(location.latitude, location.longitude);
   const rating =
     typeof location.averageRating === "number" ? location.averageRating : null;
   const photoCount = location.photos.length;
@@ -139,17 +137,13 @@ export function LocationHero({
             label={isFavorite ? "Saved to favorites" : "Save to favorites"}
             variant={isFavorite ? "secondary" : "outline"}
           />
-          {directions && (
-            <a
-              href={directions}
-              target="_blank"
-              rel="noreferrer"
-              className={buttonVariants({ size: "sm" })}
-            >
-              <Navigation aria-hidden="true" className="size-3.5" />
-              Get directions
-            </a>
-          )}
+          <Link
+            href={`/routes?destinationId=${location.id}`}
+            className={buttonVariants({ size: "sm" })}
+          >
+            <Navigation aria-hidden="true" className="size-3.5" />
+            Get directions
+          </Link>
           <Link
             href="/explore/map"
             className={buttonVariants({ variant: "ghost", size: "sm" })}

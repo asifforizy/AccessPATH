@@ -231,6 +231,29 @@ const getModerationAnalytics = async () => {
 const monthKey = (date: Date) =>
 	`${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
 
+/**
+ * Months that had at least one row, counted in the database.
+ *
+ * Counting in SQL keeps this endpoint constant-time per table instead of
+ * streaming every `createdAt` in the window to Node (which took ~25s once the
+ * tables reached six figures).
+ */
+const countsByMonth = async (table: string, start: Date) => {
+	const rows = await prisma.$queryRawUnsafe<
+		Array<{ month: string; total: number }>
+	>(
+		`SELECT to_char(date_trunc('month', "createdAt"), 'YYYY-MM') AS month,
+		        COUNT(*)::int AS total
+		 FROM "${table}"
+		 WHERE "createdAt" >= $1
+		 GROUP BY 1
+		 ORDER BY 1`,
+		start,
+	);
+
+	return new Map(rows.map((row) => [row.month, Number(row.total)]));
+};
+
 const getMonthlyTrends = async (query: IMonthlyTrendsQuery) => {
 	const now = new Date();
 	const start = new Date(
@@ -246,65 +269,21 @@ const getMonthlyTrends = async (query: IMonthlyTrendsQuery) => {
 
 	const [users, locations, reports, contributions, reviews] = await Promise.all(
 		[
-			prisma.user.findMany({
-				where: { createdAt: { gte: start } },
-				select: { createdAt: true },
-			}),
-			prisma.location.findMany({
-				where: { createdAt: { gte: start } },
-				select: { createdAt: true },
-			}),
-			prisma.accessibilityReport.findMany({
-				where: { createdAt: { gte: start } },
-				select: { createdAt: true },
-			}),
-			prisma.contribution.findMany({
-				where: { createdAt: { gte: start } },
-				select: { createdAt: true },
-			}),
-			prisma.review.findMany({
-				where: { createdAt: { gte: start } },
-				select: { createdAt: true },
-			}),
+			countsByMonth("User", start),
+			countsByMonth("Location", start),
+			countsByMonth("AccessibilityReport", start),
+			countsByMonth("Contribution", start),
+			countsByMonth("Review", start),
 		],
 	);
 
-	const empty = () =>
-		Object.fromEntries(keys.map((key) => [key, 0])) as Record<string, number>;
-
-	const buckets = {
-		users: empty(),
-		locations: empty(),
-		reports: empty(),
-		contributions: empty(),
-		reviews: empty(),
-	};
-
-	const add = (
-		target: Record<string, number>,
-		items: { createdAt: Date }[],
-	) => {
-		for (const item of items) {
-			const key = monthKey(item.createdAt);
-			if (key in target) {
-				target[key] = (target[key] ?? 0) + 1;
-			}
-		}
-	};
-
-	add(buckets.users, users);
-	add(buckets.locations, locations);
-	add(buckets.reports, reports);
-	add(buckets.contributions, contributions);
-	add(buckets.reviews, reviews);
-
 	return keys.map((key) => ({
 		month: key,
-		users: buckets.users[key] ?? 0,
-		locations: buckets.locations[key] ?? 0,
-		reports: buckets.reports[key] ?? 0,
-		contributions: buckets.contributions[key] ?? 0,
-		reviews: buckets.reviews[key] ?? 0,
+		users: users.get(key) ?? 0,
+		locations: locations.get(key) ?? 0,
+		reports: reports.get(key) ?? 0,
+		contributions: contributions.get(key) ?? 0,
+		reviews: reviews.get(key) ?? 0,
 	}));
 };
 

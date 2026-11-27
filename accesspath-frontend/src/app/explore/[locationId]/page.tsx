@@ -21,7 +21,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { osmDirectionsUrl, osmPlaceUrl } from "@/lib/geo";
+import { osmPlaceUrl } from "@/lib/geo";
 import {
   addFavorite,
   checkFavorite,
@@ -98,7 +98,6 @@ export default async function LocationDetailPage({
   const isFavorite = favorite.data?.isFavorite ?? false;
   const primaryPhoto =
     location.photos.find((photo) => photo.isPrimary) ?? location.photos[0];
-  const directions = osmDirectionsUrl(location.latitude, location.longitude);
   const hasPhoto = location.photos.length > 0;
 
   return (
@@ -225,17 +224,13 @@ export default async function LocationDetailPage({
               </div>
 
               <div className="space-y-1 border-t border-border pt-3 text-xs">
-                {directions && (
-                  <a
-                    href={directions}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="flex items-center justify-between gap-2 rounded-md px-1 py-1 text-muted-foreground hover:text-foreground"
-                  >
-                    Walking directions
-                    <ChevronRight aria-hidden="true" className="size-3.5" />
-                  </a>
-                )}
+                <Link
+                  href={`/routes?destinationId=${location.id}`}
+                  className="flex items-center justify-between gap-2 rounded-md px-1 py-1 text-muted-foreground hover:text-foreground"
+                >
+                  Plan an accessible route
+                  <ChevronRight aria-hidden="true" className="size-3.5" />
+                </Link>
                 <a
                   href={osmPlaceUrl(location.latitude, location.longitude)}
                   target="_blank"

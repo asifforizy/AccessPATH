@@ -1,3 +1,5 @@
+import { Suspense } from "react";
+
 import { RoutePlanner } from "./_components/route-planner";
 
 export default function RoutesPage() {
@@ -13,7 +15,10 @@ export default function RoutesPage() {
       </header>
 
       <div className="min-h-0 flex-1">
-        <RoutePlanner />
+        {/* The planner reads ?destinationId= to preload a place. */}
+        <Suspense fallback={null}>
+          <RoutePlanner />
+        </Suspense>
       </div>
     </div>
   );

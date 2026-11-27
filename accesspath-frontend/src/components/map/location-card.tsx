@@ -48,6 +48,8 @@ export function LocationCard({
       aria-pressed={selected}
       aria-label={`${place.name}, ${place.category?.name ?? "uncategorised"}${
         distance ? `, ${distance} away` : ""
+      }, ${place.reviewCount} ${
+        place.reviewCount === 1 ? "review" : "reviews"
       }, ${place.verification === "verified" ? "verified" : place.verification === "unverified" ? "not verified" : "accessibility unknown"}`}
       className={cn(
         "w-full rounded-lg border border-border bg-card p-3 text-left transition-colors",
@@ -63,6 +65,10 @@ export function LocationCard({
             <span className="truncate">
               {place.category?.name ?? "Uncategorised"}
               {distance ? ` · ${distance}` : ""}
+            </span>
+            <span className="shrink-0">
+              · {place.reviewCount}{" "}
+              {place.reviewCount === 1 ? "review" : "reviews"}
             </span>
           </p>
         </div>

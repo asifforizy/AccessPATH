@@ -94,6 +94,30 @@ const workspaceLinks: NavLink[] = [
   { href: "/uploads", label: "Uploads", icon: Upload },
   { href: "/notifications", label: "Notifications", icon: Bell },
   { href: "/preferences", label: "Preferences", icon: SlidersHorizontal },
+];
+
+/** Administration: platform data and the tools that keep it clean. */
+const adminLinks: NavLink[] = [
+  {
+    href: "/admin",
+    label: "Admin overview",
+    icon: Activity,
+    exact: true,
+    roles: ["ADMIN"],
+  },
+  { href: "/admin/users", label: "Users", icon: Users, roles: ["ADMIN"] },
+  {
+    href: "/admin/locations",
+    label: "Locations",
+    icon: MapPinned,
+    roles: ["ADMIN"],
+  },
+  {
+    href: "/admin/categories",
+    label: "Categories",
+    icon: Tags,
+    roles: ["ADMIN"],
+  },
   {
     href: "/moderation",
     label: "Moderation",
@@ -106,13 +130,6 @@ const workspaceLinks: NavLink[] = [
     icon: BarChart3,
     roles: ["ADMIN", "MODERATOR"],
   },
-];
-
-const adminLinks: NavLink[] = [
-  { href: "/admin", label: "Admin overview", icon: Activity, exact: true },
-  { href: "/admin/users", label: "Users", icon: Users },
-  { href: "/admin/categories", label: "Categories", icon: Tags },
-  { href: "/admin/locations", label: "Locations", icon: MapPinned },
 ];
 
 function getDashboardHref(role?: UserRole) {
@@ -134,7 +151,7 @@ export function Navbar({ user }: NavbarProps) {
     !link.roles || (user ? link.roles.includes(user.role) : false);
 
   const visibleWorkspace = workspaceLinks.filter(canSee);
-  const visibleAdmin = user?.role === "ADMIN" ? adminLinks : [];
+  const visibleAdmin = adminLinks.filter(canSee);
 
   const isActive = (item: { href: string; exact?: boolean }) => {
     const { href, exact } = item;
