@@ -59,5 +59,4 @@ router.put(
 );
 router.delete("/locations/:locationId", AdminManageController.archiveLocation);
 
-
 export const AdminRoutes = router;

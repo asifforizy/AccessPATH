@@ -209,7 +209,10 @@ const applyContribution = async (
 						...profileData,
 						accessibilityScore:
 							typeof data.accessibilityScore === "number"
-								? Math.min(100, Math.max(0, Math.round(data.accessibilityScore)))
+								? Math.min(
+										100,
+										Math.max(0, Math.round(data.accessibilityScore)),
+									)
 								: 0,
 						additionalInformation:
 							typeof data.additionalInformation === "string"

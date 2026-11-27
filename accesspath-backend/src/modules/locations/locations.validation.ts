@@ -1,18 +1,8 @@
 import z from "zod";
 
 const ListLocationsQueryZodSchema = z.object({
-	q: z
-		.string()
-		.trim()
-		.min(1)
-		.max(100)
-		.optional(),
-	city: z
-		.string()
-		.trim()
-		.min(1)
-		.max(100)
-		.optional(),
+	q: z.string().trim().min(1).max(100).optional(),
+	city: z.string().trim().min(1).max(100).optional(),
 	categoryId: z.uuid().optional(),
 	page: z.coerce
 		.number()

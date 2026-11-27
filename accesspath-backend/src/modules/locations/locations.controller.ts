@@ -7,9 +7,7 @@ import { LocationService } from "./locations.service";
 import { LocationValidation } from "./locations.validation";
 
 const listLocations = catchAsync(async (req: Request, res: Response) => {
-	const query = LocationValidation.ListLocationsQueryZodSchema.parse(
-		req.query,
-	);
+	const query = LocationValidation.ListLocationsQueryZodSchema.parse(req.query);
 	const result = await LocationService.listLocations(query);
 
 	sendResponse(res, {
